@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0d1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="服务器管理">
+<title>Server Tracker · 服务器管理</title>
+<link rel="manifest" href="./manifest.json">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg: #0d1117;
+  --bg-2: #161b22;
+  --bg-3: #21262d;
+  --bg-4: #30363d;
+  --text: #c9d1d9;
+  --text-2: #8b949e;
+  --text-3: #6e7681;
+  --line: #30363d;
+  --line-soft: #21262d;
+  --accent: #3fb950;       /* 终端绿 */
+  --accent-2: #58a6ff;     /* 蓝 */
+  --warn: #f85149;         /* 红 */
+  --orange: #d29922;
+  --yellow: #e3b341;
+  --purple: #bc8cff;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans SC', system-ui, sans-serif;
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(63, 185, 80, 0.06) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(88, 166, 255, 0.04) 0%, transparent 40%);
+}
+
+#app {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 18px 16px 100px;
+}
+
+/* ============ Header ============ */
+.header {
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.header h1 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.header h1::before {
+  content: '$';
+  color: var(--text-3);
+  font-weight: 400;
+}
+.header .sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-3);
+  letter-spacing: 0.05em;
+}
+
+/* ============ Alert Banner (到期警告) ============ */
+.alert-banner {
+  background: linear-gradient(135deg, rgba(248, 81, 73, 0.15), rgba(210, 153, 34, 0.1));
+  border: 1px solid var(--warn);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.alert-banner.empty {
+  background: linear-gradient(135deg, rgba(63, 185, 80, 0.08), rgba(88, 166, 255, 0.05));
+  border-color: var(--accent);
+}
+.alert-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--warn);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.alert-banner.empty .alert-title { color: var(--accent); }
+
+.alert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.alert-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.alert-item:active { transform: scale(0.99); }
+.alert-item:hover { background: rgba(0, 0, 0, 0.4); }
+.alert-item-info { flex: 1; min-width: 0; }
+.alert-item-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.alert-item-meta {
+  font-size: 11px;
+  color: var(--text-2);
+  margin-top: 1px;
+}
+.alert-item-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.status-overdue { background: var(--warn); color: white; }
+.status-today { background: var(--orange); color: white; }
+.status-soon { background: var(--yellow); color: var(--bg); }
+
+/* ============ Summary Cards ============ */
+.summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.tile {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  padding: 14px;
+  border-radius: 8px;
+}
+.tile .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-3);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.tile .value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 22px;
+  font-weight: 700;
+}
+.tile .value.green { color: var(--accent); }
+.tile .value.blue { color: var(--accent-2); }
+.tile .meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+/* ============ Action buttons ============ */
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.action-btn {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 10px 6px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+.action-btn:active { transform: scale(0.97); }
+.action-btn:hover { background: var(--bg-3); border-color: var(--accent); }
+.action-btn .icon { font-size: 18px; }
+
+/* ============ Search ============ */
+.search-bar {
+  position: relative;
+  margin-bottom: 14px;
+}
+.search-bar input {
+  width: 100%;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 10px 14px 10px 36px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  outline: none;
+}
+.search-bar input:focus {
+  border-color: var(--accent);
+}
+.search-bar::before {
+  content: '⌕';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-3);
+  font-size: 16px;
+}
+
+/* ============ Filters ============ */
+.filter-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.filter-tab {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  color: var(--text-2);
+  padding: 6px 12px;
+  border-radius: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.filter-tab.active {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+/* ============ Server list ============ */
+.server-group {
+  margin-bottom: 18px;
+}
+.server-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 4px 0 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px dashed var(--line);
+}
+.server-group-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+.server-group-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.server-card {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+.server-card:active { transform: scale(0.99); }
+.server-card:hover { border-color: var(--accent); }
+.server-card.disabled {
+  opacity: 0.5;
+}
+.server-card.disabled::before {
+  content: 'INACTIVE';
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-3);
+  background: var(--bg-3);
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.1em;
+}
+.server-card.overdue {
+  border-color: var(--warn);
+  background: linear-gradient(135deg, rgba(248, 81, 73, 0.08), var(--bg-2));
+}
+.server-card.due-soon {
+  border-color: var(--orange);
+}
+
+.server-ip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-2);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.server-ip .copy-btn {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--text-3);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-family: inherit;
+  cursor: pointer;
+  margin-left: auto;
+}
+.server-ip .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+.server-ip .copy-btn.copied { color: var(--accent); border-color: var(--accent); }
+
+.server-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--text-2);
+  font-family: 'JetBrains Mono', monospace;
+}
+.server-meta .price {
+  color: var(--yellow);
+  font-weight: 600;
+}
+.server-meta .due-date {
+  color: var(--text-2);
+}
+.server-meta .due-date.overdue { color: var(--warn); font-weight: 700; }
+.server-meta .due-date.soon { color: var(--orange); font-weight: 600; }
+
+.server-note {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+/* ============ FAB / Buttons ============ */
+.fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 50%;
+  font-size: 28px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(63, 185, 80, 0.4);
+  z-index: 50;
+}
+.fab:active { transform: scale(0.92); }
+
+.btn {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.15s;
+}
+.btn:active { transform: scale(0.98); }
+.btn:hover { background: #2ea043; }
+.btn-ghost {
+  background: var(--bg-3);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+.btn-ghost:hover { background: var(--bg-4); }
+.btn-danger {
+  background: var(--warn);
+  color: white;
+}
+
+/* ============ Modal ============ */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(4px);
+}
+.modal.show { display: flex; }
+.modal-content {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-bottom: none;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 20px 18px 30px;
+  border-radius: 16px 16px 0 0;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.modal-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  font-size: 22px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+/* ============ Form fields ============ */
+.field-label {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-2);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+.form-group { margin-bottom: 14px; }
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+input, select, textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  border-radius: 6px;
+  outline: none;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+input[type="number"] {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+}
+input[type="date"] {
+  font-family: 'JetBrains Mono', monospace;
+  color-scheme: dark;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+
+.toggle-row {
+  display: flex;
+  gap: 10px;
+}
+.toggle-btn {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--text-2);
+  padding: 10px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.toggle-btn.active {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.toggle-btn.danger.active {
+  background: var(--warn);
+  border-color: var(--warn);
+  color: white;
+}
+
+/* ============ Toast ============ */
+.toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--bg-3);
+  border: 1px solid var(--accent);
+  color: var(--text);
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s;
+  z-index: 1000;
+  white-space: nowrap;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ============ Empty state ============ */
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-3);
+}
+.empty .icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.4;
+}
+.empty .text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+
+.hidden { display: none !important; }
+
+/* 滚动条 */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header class="header">
+    <h1>./server-tracker</h1>
+    <div class="sub"># manage your VPS subscriptions · 服务器订阅管理</div>
+  </header>
+
+  <!-- 到期警告 -->
+  <div id="alertBanner" class="alert-banner empty">
+    <div class="alert-title">
+      <span id="alertIcon">✓</span>
+      <span id="alertTitle">所有服务器都还远</span>
+    </div>
+    <div class="alert-list" id="alertList"></div>
+  </div>
+
+  <!-- 总览 -->
+  <div class="summary">
+    <div class="tile">
+      <div class="label">月度支出</div>
+      <div class="value green" id="monthlyTotal">RM 0</div>
+      <div class="meta" id="activeCount">0 active</div>
+    </div>
+    <div class="tile">
+      <div class="label">下次到期</div>
+      <div class="value blue" id="nextDue">—</div>
+      <div class="meta" id="nextDueName">—</div>
+    </div>
+  </div>
+
+  <!-- Action buttons -->
+  <div class="actions">
+    <button class="action-btn" id="importBtn">
+      <span class="icon">📥</span>
+      <span>导入 txt</span>
+    </button>
+    <button class="action-btn" id="exportBtn">
+      <span class="icon">📤</span>
+      <span>导出备份</span>
+    </button>
+    <button class="action-btn" id="settingsBtn">
+      <span class="icon">⚙️</span>
+      <span>设置</span>
+    </button>
+  </div>
+
+  <!-- 搜索 -->
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="搜索 IP / 供应商 / 备注..." autocomplete="off">
+  </div>
+
+  <!-- 筛选 -->
+  <div class="filter-tabs">
+    <button class="filter-tab active" data-filter="all">全部</button>
+    <button class="filter-tab" data-filter="active">启用</button>
+    <button class="filter-tab" data-filter="overdue">已逾期</button>
+    <button class="filter-tab" data-filter="soon">即将到期</button>
+    <button class="filter-tab" data-filter="inactive">已停用</button>
+  </div>
+
+  <!-- 服务器列表 -->
+  <div id="serverList"></div>
+
+  <!-- FAB -->
+  <button class="fab" id="addBtn" title="添加服务器">+</button>
+</div>
+
+<!-- 服务器编辑模态框 -->
+<div class="modal" id="serverModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">添加服务器</span>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    
+    <div class="form-row">
+      <div>
+        <label class="field-label">IP 地址</label>
+        <input type="text" id="inIp" placeholder="103.68.63.120" autocomplete="off">
+      </div>
+      <div>
+        <label class="field-label">供应商</label>
+        <input type="text" id="inProvider" placeholder="Layerstack" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="field-label">备注 (可选)</label>
+      <input type="text" id="inLabel" placeholder="主站 / 备份服务器 / 印尼区..." autocomplete="off">
+    </div>
+
+    <div class="form-row">
+      <div>
+        <label class="field-label">月费 RM</label>
+        <input type="number" id="inPrice" step="0.01" min="0" placeholder="50.00" inputmode="decimal">
+      </div>
+      <div>
+        <label class="field-label">付款周期</label>
+        <select id="inCycle">
+          <option value="monthly">每月</option>
+          <option value="quarterly">每季</option>
+          <option value="yearly">每年</option>
+          <option value="once">一次性</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="field-label">下次到期日 ⚠️</label>
+      <input type="date" id="inDueDate">
+      <div style="font-size: 11px; color: var(--text-3); margin-top: 4px; font-family: 'JetBrains Mono', monospace;">
+        每次续费后,自动 +1 周期
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="field-label">状态</label>
+      <div class="toggle-row">
+        <button type="button" class="toggle-btn active" data-status="active">🟢 启用</button>
+        <button type="button" class="toggle-btn danger" data-status="inactive">⚫ 停用</button>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-top: 20px;">
+      <button class="btn" id="saveServerBtn" style="flex: 1;">💾 保存</button>
+      <button class="btn btn-danger hidden" id="deleteServerBtn" style="flex: 1;">🗑 删除</button>
+    </div>
+    
+    <button class="btn btn-ghost" id="renewBtn" style="margin-top: 8px; display: none;">✓ 已续费 (到期日 +1 周期)</button>
+  </div>
+</div>
+
+<!-- 设置模态框 -->
+<div class="modal" id="settingsModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-title">⚙️ 设置</span>
+      <button class="modal-close" id="settingsClose">✕</button>
+    </div>
+    
+    <div class="form-group">
+      <label class="field-label">提醒提前天数</label>
+      <input type="number" id="reminderDays" min="1" max="30" value="7">
+      <div style="font-size: 11px; color: var(--text-3); margin-top: 4px; font-family: 'JetBrains Mono', monospace;">
+        到期前 X 天开始提醒
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label class="field-label">浏览器通知</label>
+      <button class="btn btn-ghost" id="enableNotifBtn">🔔 开启浏览器通知</button>
+      <div id="notifStatus" style="font-size: 11px; color: var(--text-3); margin-top: 6px; font-family: 'JetBrains Mono', monospace;"></div>
+    </div>
+    
+    <div class="form-group">
+      <label class="field-label">数据</label>
+      <button class="btn btn-ghost" id="exportJsonBtn" style="margin-bottom: 6px;">📦 导出 JSON 备份</button>
+      <button class="btn btn-ghost" id="importJsonBtn" style="margin-bottom: 6px;">📥 导入 JSON 备份</button>
+      <button class="btn btn-danger" id="clearAllBtn">⚠ 清空所有数据</button>
+      <input type="file" id="importJsonFile" accept=".json" style="display: none;">
+    </div>
+  </div>
+</div>
+
+<!-- 导入 txt 模态框 -->
+<div class="modal" id="importModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-title">📥 导入服务器列表</span>
+      <button class="modal-close" id="importClose">✕</button>
+    </div>
+    
+    <div style="font-size: 13px; color: var(--text-2); margin-bottom: 12px; line-height: 1.6;">
+      支持你那种格式:<br>
+      <code style="font-family: 'JetBrains Mono', monospace; background: var(--bg); padding: 2px 6px; border-radius: 3px; font-size: 11px;">供应商名</code><br>
+      <code style="font-family: 'JetBrains Mono', monospace; background: var(--bg); padding: 2px 6px; border-radius: 3px; font-size: 11px;">- IP1 (备注)</code><br>
+      <code style="font-family: 'JetBrains Mono', monospace; background: var(--bg); padding: 2px 6px; border-radius: 3px; font-size: 11px;">- IP2</code>
+    </div>
+    
+    <div class="form-group">
+      <label class="field-label">粘贴或上传 txt 内容</label>
+      <textarea id="importText" placeholder="One Provider&#10;- 62.210.88.155&#10;&#10;Hetzner 德国&#10;- 46.4.9.118"></textarea>
+    </div>
+    
+    <input type="file" id="importTxtFile" accept=".txt,.csv" style="display: none;">
+    
+    <div style="display: flex; gap: 10px;">
+      <button class="btn btn-ghost" id="uploadTxtBtn" style="flex: 1;">📁 上传文件</button>
+      <button class="btn" id="parseImportBtn" style="flex: 1;">✓ 解析并导入</button>
+    </div>
+    
+    <div id="importPreview" style="margin-top: 14px;"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============= DB =============
+const DB_NAME = 'serverTrackerDB';
+const DB_VERSION = 1;
+let db;
+
+function openDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('servers')) {
+        const s = d.createObjectStore('servers', { keyPath: 'id', autoIncrement: true });
+        s.createIndex('provider', 'provider');
+      }
+      if (!d.objectStoreNames.contains('settings')) {
+        d.createObjectStore('settings', { keyPath: 'key' });
+      }
+    };
+    req.onsuccess = (e) => { db = e.target.result; res(db); };
+    req.onerror = rej;
+  });
+}
+
+const Data = {
+  add(s) {
+    return new Promise((res, rej) => {
+      const tx = db.transaction('servers', 'readwrite');
+      const r = tx.objectStore('servers').add(s);
+      r.onsuccess = () => res(r.result);
+      r.onerror = rej;
+    });
+  },
+  update(s) {
+    return new Promise((res, rej) => {
+      const tx = db.transaction('servers', 'readwrite');
+      const r = tx.objectStore('servers').put(s);
+      r.onsuccess = () => res();
+      r.onerror = rej;
+    });
+  },
+  delete(id) {
+    return new Promise((res, rej) => {
+      const tx = db.transaction('servers', 'readwrite');
+      const r = tx.objectStore('servers').delete(id);
+      r.onsuccess = () => res();
+      r.onerror = rej;
+    });
+  },
+  getAll() {
+    return new Promise((res, rej) => {
+      const tx = db.transaction('servers', 'readonly');
+      const r = tx.objectStore('servers').getAll();
+      r.onsuccess = () => res(r.result || []);
+      r.onerror = rej;
+    });
+  },
+  setSetting(k, v) {
+    return new Promise((res, rej) => {
+      const tx = db.transaction('settings', 'readwrite');
+      const r = tx.objectStore('settings').put({ key: k, value: v });
+      r.onsuccess = () => res();
+      r.onerror = rej;
+    });
+  },
+  getSetting(k) {
+    return new Promise((res) => {
+      const tx = db.transaction('settings', 'readonly');
+      const r = tx.objectStore('settings').get(k);
+      r.onsuccess = () => res(r.result?.value);
+      r.onerror = () => res(null);
+    });
+  },
+  clearAll() {
+    return new Promise((res, rej) => {
+      const tx = db.transaction('servers', 'readwrite');
+      tx.objectStore('servers').clear();
+      tx.oncomplete = () => res();
+      tx.onerror = rej;
+    });
+  }
+};
+
+// ============= UTILS =============
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const target = new Date(dateStr + 'T00:00:00');
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return Math.round((target - now) / (1000 * 60 * 60 * 24));
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// 加 1 个周期到日期
+function addPeriod(dateStr, cycle) {
+  const d = new Date(dateStr + 'T00:00:00');
+  if (cycle === 'monthly') d.setMonth(d.getMonth() + 1);
+  else if (cycle === 'quarterly') d.setMonth(d.getMonth() + 3);
+  else if (cycle === 'yearly') d.setFullYear(d.getFullYear() + 1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// 月度费用 (按周期换算)
+function monthlyPrice(price, cycle) {
+  if (!price) return 0;
+  if (cycle === 'monthly') return price;
+  if (cycle === 'quarterly') return price / 3;
+  if (cycle === 'yearly') return price / 12;
+  return 0;  // once 不算
+}
+
+// ============= 解析 txt =============
+function parseServerListTxt(text) {
+  const lines = text.split('\n').map(l => l.trim());
+  const servers = [];
+  let currentProvider = '';
+  
+  for (const line of lines) {
+    if (!line) continue;
+    
+    // 是否是 IP 行 (以 - 开头,或者直接是 IP)
+    if (line.startsWith('-') || line.startsWith('•') || line.startsWith('*')) {
+      const rest = line.replace(/^[-•*]\s*/, '').trim();
+      // 提取 IP 和括号内的备注
+      const ipMatch = rest.match(/^([\d.]+|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+      if (ipMatch) {
+        const ip = ipMatch[1];
+        const after = rest.slice(ipMatch[0].length).trim();
+        // 提取括号内的备注 (中文括号或英文括号)
+        let label = '';
+        let inactive = false;
+        const noteMatch = after.match(/[（(]([^）)]+)[）)]/);
+        if (noteMatch) {
+          label = noteMatch[1].trim();
+          // 检测停用关键词
+          if (/没用了|不用了|用不到|废弃|停用|inactive|disabled|expired/i.test(label)) {
+            inactive = true;
+          }
+        }
+        // 任何剩余文字都加到 label
+        const remaining = after.replace(/[（(][^）)]+[）)]/, '').trim();
+        if (remaining && !label.includes(remaining)) {
+          label = label ? `${label} · ${remaining}` : remaining;
+        }
+        // 检测停用关键词在 label 之外
+        if (/没用了|不用了|用不到/i.test(after)) inactive = true;
+        
+        servers.push({
+          provider: currentProvider,
+          ip: ip,
+          label: label,
+          status: inactive ? 'inactive' : 'active',
+          price: 0,
+          cycle: 'monthly',
+          dueDate: '',
+          createdAt: Date.now()
+        });
+      }
+    } else {
+      // 这是供应商名(可能后面有 URL 等)
+      // 去掉 https://... 部分作为干净的供应商名
+      let provider = line.replace(/https?:\/\/\S+/g, '').trim();
+      // 去掉末尾的标点和空白
+      provider = provider.replace(/[:：]$/, '').trim();
+      if (provider) currentProvider = provider;
+    }
+  }
+  
+  return servers;
+}
+
+// ============= RENDER =============
+let currentFilter = 'all';
+let currentSearch = '';
+let editingServerId = null;
+let pendingServerStatus = 'active';
+
+async function renderAll() {
+  const all = await Data.getAll();
+  
+  // 警告横幅
+  renderAlertBanner(all);
+  
+  // 总览
+  renderSummary(all);
+  
+  // 列表
+  renderServerList(all);
+}
+
+function renderAlertBanner(all) {
+  const reminderDays = 7;  // TODO: 从设置读
+  const banner = document.getElementById('alertBanner');
+  const list = document.getElementById('alertList');
+  
+  // 找出所有有到期日的活跃服务器
+  const upcoming = all
+    .filter(s => s.status !== 'inactive' && s.dueDate)
+    .map(s => ({ ...s, days: daysUntil(s.dueDate) }))
+    .filter(s => s.days !== null && s.days <= reminderDays)
+    .sort((a, b) => a.days - b.days);
+  
+  if (upcoming.length === 0) {
+    banner.classList.add('empty');
+    document.getElementById('alertIcon').textContent = '✓';
+    document.getElementById('alertTitle').textContent = '所有服务器都还远';
+    list.innerHTML = '';
+    return;
+  }
+  
+  banner.classList.remove('empty');
+  document.getElementById('alertIcon').textContent = '⚠️';
+  document.getElementById('alertTitle').textContent = `即将到期 (${upcoming.length})`;
+  
+  list.innerHTML = upcoming.map(s => {
+    let statusText, statusClass;
+    if (s.days < 0) {
+      statusText = `逾期 ${Math.abs(s.days)} 天`;
+      statusClass = 'status-overdue';
+    } else if (s.days === 0) {
+      statusText = '今天到期';
+      statusClass = 'status-today';
+    } else {
+      statusText = `${s.days} 天后`;
+      statusClass = 'status-soon';
+    }
+    return `
+      <div class="alert-item" data-id="${s.id}">
+        <div class="alert-item-info">
+          <div class="alert-item-name">${escapeHtml(s.ip)}</div>
+          <div class="alert-item-meta">${escapeHtml(s.provider || '—')}${s.label ? ' · ' + escapeHtml(s.label) : ''}${s.price > 0 ? ' · RM ' + s.price : ''}</div>
+        </div>
+        <div class="alert-item-status ${statusClass}">${statusText}</div>
+      </div>
+    `;
+  }).join('');
+  
+  list.querySelectorAll('.alert-item').forEach(el => {
+    el.addEventListener('click', () => openServerEdit(parseInt(el.dataset.id)));
+  });
+}
+
+function renderSummary(all) {
+  // 月度支出 = 所有 active 服务器的月度等价费用之和
+  const active = all.filter(s => s.status !== 'inactive');
+  const total = active.reduce((sum, s) => sum + monthlyPrice(s.price || 0, s.cycle || 'monthly'), 0);
+  document.getElementById('monthlyTotal').textContent = `RM ${total.toFixed(0)}`;
+  document.getElementById('activeCount').textContent = `${active.length} active · ${all.length} total`;
+  
+  // 下次到期
+  const upcoming = active
+    .filter(s => s.dueDate)
+    .map(s => ({ ...s, days: daysUntil(s.dueDate) }))
+    .filter(s => s.days !== null && s.days >= 0)
+    .sort((a, b) => a.days - b.days);
+  
+  if (upcoming.length > 0) {
+    const next = upcoming[0];
+    document.getElementById('nextDue').textContent = next.days === 0 ? 'TODAY' : `${next.days}d`;
+    document.getElementById('nextDueName').textContent = next.ip;
+  } else {
+    document.getElementById('nextDue').textContent = '—';
+    document.getElementById('nextDueName').textContent = '尚未设置到期日';
+  }
+}
+
+function renderServerList(all) {
+  let filtered = all;
+  
+  // 搜索过滤
+  if (currentSearch) {
+    const q = currentSearch.toLowerCase();
+    filtered = filtered.filter(s => 
+      (s.ip || '').toLowerCase().includes(q) ||
+      (s.provider || '').toLowerCase().includes(q) ||
+      (s.label || '').toLowerCase().includes(q)
+    );
+  }
+  
+  // 状态过滤
+  if (currentFilter === 'active') {
+    filtered = filtered.filter(s => s.status !== 'inactive');
+  } else if (currentFilter === 'inactive') {
+    filtered = filtered.filter(s => s.status === 'inactive');
+  } else if (currentFilter === 'overdue') {
+    filtered = filtered.filter(s => {
+      if (s.status === 'inactive' || !s.dueDate) return false;
+      return daysUntil(s.dueDate) < 0;
+    });
+  } else if (currentFilter === 'soon') {
+    filtered = filtered.filter(s => {
+      if (s.status === 'inactive' || !s.dueDate) return false;
+      const d = daysUntil(s.dueDate);
+      return d >= 0 && d <= 7;
+    });
+  }
+  
+  const container = document.getElementById('serverList');
+  
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="empty">
+        <div class="icon">📭</div>
+        <div class="text">${all.length === 0 ? '还没有服务器<br>点 + 添加 或 📥 导入 txt' : '没有匹配的'}</div>
+      </div>
+    `;
+    return;
+  }
+  
+  // 按供应商分组
+  const grouped = {};
+  filtered.forEach(s => {
+    const p = s.provider || '(无供应商)';
+    if (!grouped[p]) grouped[p] = [];
+    grouped[p].push(s);
+  });
+  
+  container.innerHTML = Object.entries(grouped).map(([provider, servers]) => `
+    <div class="server-group">
+      <div class="server-group-header">
+        <div class="server-group-name">${escapeHtml(provider)}</div>
+        <div class="server-group-count">${servers.length} server${servers.length > 1 ? 's' : ''}</div>
+      </div>
+      ${servers.map(s => {
+        const days = s.dueDate ? daysUntil(s.dueDate) : null;
+        let cardClass = 'server-card';
+        if (s.status === 'inactive') cardClass += ' disabled';
+        else if (days !== null && days < 0) cardClass += ' overdue';
+        else if (days !== null && days <= 7) cardClass += ' due-soon';
+        
+        let dueClass = '';
+        let dueText = '';
+        if (s.dueDate) {
+          if (days < 0) {
+            dueClass = 'overdue';
+            dueText = `⚠ 逾期 ${Math.abs(days)} 天`;
+          } else if (days === 0) {
+            dueClass = 'overdue';
+            dueText = '⚠ 今天到期';
+          } else if (days <= 7) {
+            dueClass = 'soon';
+            dueText = `📅 ${days} 天后`;
+          } else {
+            dueText = `📅 ${s.dueDate}`;
+          }
+        }
+        
+        return `
+          <div class="server-card ${cardClass.replace('server-card ', '')}" data-id="${s.id}">
+            <div class="server-ip">
+              <span>${escapeHtml(s.ip)}</span>
+              <button class="copy-btn" data-ip="${escapeHtml(s.ip)}">📋 copy</button>
+            </div>
+            <div class="server-meta">
+              ${s.price > 0 ? `<span class="price">RM ${s.price}/${s.cycle === 'monthly' ? 'mo' : s.cycle === 'quarterly' ? 'qtr' : s.cycle === 'yearly' ? 'yr' : 'once'}</span>` : ''}
+              ${dueText ? `<span class="due-date ${dueClass}">${dueText}</span>` : ''}
+            </div>
+            ${s.label ? `<div class="server-note">${escapeHtml(s.label)}</div>` : ''}
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `).join('');
+  
+  // 点击编辑
+  container.querySelectorAll('.server-card').forEach(card => {
+    card.addEventListener('click', (e) => {
+      if (e.target.classList.contains('copy-btn')) return;
+      openServerEdit(parseInt(card.dataset.id));
+    });
+  });
+  
+  // 复制 IP
+  container.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const ip = btn.dataset.ip;
+      navigator.clipboard.writeText(ip).then(() => {
+        btn.textContent = '✓ copied';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = '📋 copy';
+          btn.classList.remove('copied');
+        }, 1500);
+      });
+    });
+  });
+}
+
+// ============= 模态框: 添加/编辑 =============
+async function openServerEdit(id = null) {
+  editingServerId = id;
+  
+  if (id) {
+    const all = await Data.getAll();
+    const s = all.find(x => x.id === id);
+    if (!s) return;
+    document.getElementById('modalTitle').textContent = '编辑服务器';
+    document.getElementById('inIp').value = s.ip || '';
+    document.getElementById('inProvider').value = s.provider || '';
+    document.getElementById('inLabel').value = s.label || '';
+    document.getElementById('inPrice').value = s.price || '';
+    document.getElementById('inCycle').value = s.cycle || 'monthly';
+    document.getElementById('inDueDate').value = s.dueDate || '';
+    pendingServerStatus = s.status || 'active';
+    document.getElementById('deleteServerBtn').classList.remove('hidden');
+    document.getElementById('renewBtn').style.display = s.dueDate ? 'block' : 'none';
+  } else {
+    document.getElementById('modalTitle').textContent = '添加服务器';
+    document.getElementById('inIp').value = '';
+    document.getElementById('inProvider').value = '';
+    document.getElementById('inLabel').value = '';
+    document.getElementById('inPrice').value = '';
+    document.getElementById('inCycle').value = 'monthly';
+    document.getElementById('inDueDate').value = '';
+    pendingServerStatus = 'active';
+    document.getElementById('deleteServerBtn').classList.add('hidden');
+    document.getElementById('renewBtn').style.display = 'none';
+  }
+  
+  // 同步状态按钮
+  document.querySelectorAll('.toggle-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.status === pendingServerStatus);
+  });
+  
+  document.getElementById('serverModal').classList.add('show');
+}
+
+document.getElementById('modalClose').addEventListener('click', () => {
+  document.getElementById('serverModal').classList.remove('show');
+});
+
+document.querySelectorAll('.toggle-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    pendingServerStatus = b.dataset.status;
+    document.querySelectorAll('.toggle-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+  });
+});
+
+document.getElementById('saveServerBtn').addEventListener('click', async () => {
+  const ip = document.getElementById('inIp').value.trim();
+  const provider = document.getElementById('inProvider').value.trim();
+  if (!ip) { showToast('请输入 IP'); return; }
+  
+  const data = {
+    ip, provider,
+    label: document.getElementById('inLabel').value.trim(),
+    price: parseFloat(document.getElementById('inPrice').value) || 0,
+    cycle: document.getElementById('inCycle').value,
+    dueDate: document.getElementById('inDueDate').value,
+    status: pendingServerStatus
+  };
+  
+  if (editingServerId) {
+    data.id = editingServerId;
+    await Data.update(data);
+    showToast('✓ 已更新');
+  } else {
+    data.createdAt = Date.now();
+    await Data.add(data);
+    showToast('✓ 已添加');
+  }
+  
+  document.getElementById('serverModal').classList.remove('show');
+  await renderAll();
+});
+
+document.getElementById('deleteServerBtn').addEventListener('click', async () => {
+  if (!editingServerId) return;
+  if (!confirm('确定删除这个服务器?')) return;
+  await Data.delete(editingServerId);
+  document.getElementById('serverModal').classList.remove('show');
+  showToast('已删除');
+  await renderAll();
+});
+
+// 续费按钮
+document.getElementById('renewBtn').addEventListener('click', async () => {
+  if (!editingServerId) return;
+  const all = await Data.getAll();
+  const s = all.find(x => x.id === editingServerId);
+  if (!s || !s.dueDate) return;
+  
+  const newDate = addPeriod(s.dueDate, s.cycle || 'monthly');
+  document.getElementById('inDueDate').value = newDate;
+  showToast(`✓ 到期日已续 → ${newDate}`);
+});
+
+document.getElementById('addBtn').addEventListener('click', () => openServerEdit(null));
+
+// ============= 搜索 / 过滤 =============
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  currentSearch = e.target.value;
+  Data.getAll().then(all => renderServerList(all));
+});
+
+document.querySelectorAll('.filter-tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.filter-tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    currentFilter = t.dataset.filter;
+    Data.getAll().then(all => renderServerList(all));
+  });
+});
+
+// ============= 导入 txt =============
+document.getElementById('importBtn').addEventListener('click', () => {
+  document.getElementById('importText').value = '';
+  document.getElementById('importPreview').innerHTML = '';
+  document.getElementById('importModal').classList.add('show');
+});
+
+document.getElementById('importClose').addEventListener('click', () => {
+  document.getElementById('importModal').classList.remove('show');
+});
+
+document.getElementById('uploadTxtBtn').addEventListener('click', () => {
+  document.getElementById('importTxtFile').click();
+});
+
+document.getElementById('importTxtFile').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+  document.getElementById('importText').value = text;
+  e.target.value = '';
+});
+
+document.getElementById('parseImportBtn').addEventListener('click', async () => {
+  const text = document.getElementById('importText').value;
+  if (!text.trim()) { showToast('请输入或上传内容'); return; }
+  
+  const servers = parseServerListTxt(text);
+  
+  if (servers.length === 0) {
+    document.getElementById('importPreview').innerHTML = `
+      <div style="color: var(--warn); font-size: 13px; padding: 10px; background: rgba(248, 81, 73, 0.1); border-radius: 6px;">
+        ✗ 没解析到服务器,检查格式是否正确
+      </div>
+    `;
+    return;
+  }
+  
+  // 显示预览
+  document.getElementById('importPreview').innerHTML = `
+    <div style="font-size: 12px; color: var(--text-2); margin-bottom: 8px; font-family: 'JetBrains Mono', monospace;">
+      ✓ 解析到 ${servers.length} 个服务器:
+    </div>
+    <div style="background: var(--bg); border-radius: 6px; padding: 10px; max-height: 200px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px;">
+      ${servers.map(s => `
+        <div style="padding: 4px 0; border-bottom: 1px dashed var(--line-soft); color: ${s.status === 'inactive' ? 'var(--text-3)' : 'var(--text)'};">
+          <span style="color: var(--accent);">${escapeHtml(s.provider || '—')}</span> · 
+          <span style="color: var(--accent-2);">${escapeHtml(s.ip)}</span>
+          ${s.label ? ` <span style="color: var(--text-3);">(${escapeHtml(s.label)})</span>` : ''}
+          ${s.status === 'inactive' ? ' <span style="color: var(--warn); font-size: 10px;">[INACTIVE]</span>' : ''}
+        </div>
+      `).join('')}
+    </div>
+    <button class="btn" id="confirmImportBtn" style="margin-top: 12px;">✓ 确认导入 ${servers.length} 个</button>
+  `;
+  
+  document.getElementById('confirmImportBtn').addEventListener('click', async () => {
+    for (const s of servers) {
+      await Data.add(s);
+    }
+    document.getElementById('importModal').classList.remove('show');
+    showToast(`✓ 已导入 ${servers.length} 个服务器`);
+    await renderAll();
+  });
+});
+
+// ============= 设置 =============
+document.getElementById('settingsBtn').addEventListener('click', async () => {
+  const days = await Data.getSetting('reminderDays') || 7;
+  document.getElementById('reminderDays').value = days;
+  
+  // 通知状态
+  if ('Notification' in window) {
+    const status = Notification.permission;
+    document.getElementById('notifStatus').textContent = `状态: ${status === 'granted' ? '✓ 已开启' : status === 'denied' ? '✗ 被禁止 (浏览器设置里允许)' : '未授权'}`;
+  } else {
+    document.getElementById('notifStatus').textContent = '✗ 此浏览器不支持';
+  }
+  
+  document.getElementById('settingsModal').classList.add('show');
+});
+
+document.getElementById('settingsClose').addEventListener('click', () => {
+  document.getElementById('settingsModal').classList.remove('show');
+});
+
+document.getElementById('reminderDays').addEventListener('change', async (e) => {
+  const v = parseInt(e.target.value) || 7;
+  await Data.setSetting('reminderDays', v);
+  showToast('✓ 已保存');
+  renderAll();
+});
+
+document.getElementById('enableNotifBtn').addEventListener('click', async () => {
+  if (!('Notification' in window)) { showToast('浏览器不支持'); return; }
+  const result = await Notification.requestPermission();
+  if (result === 'granted') {
+    showToast('✓ 通知已开启');
+    document.getElementById('notifStatus').textContent = '状态: ✓ 已开启';
+    new Notification('Server Tracker', { body: '到期时会通知你 ✓', icon: './icon-192.png' });
+  } else {
+    showToast('✗ 用户拒绝了');
+    document.getElementById('notifStatus').textContent = '状态: ✗ ' + result;
+  }
+});
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  document.getElementById('settingsBtn').click();
+  setTimeout(() => {
+    document.getElementById('exportJsonBtn').click();
+  }, 100);
+});
+
+document.getElementById('exportJsonBtn').addEventListener('click', async () => {
+  const all = await Data.getAll();
+  const blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `servers_${todayStr()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✓ 已下载备份');
+});
+
+document.getElementById('importJsonBtn').addEventListener('click', () => {
+  document.getElementById('importJsonFile').click();
+});
+
+document.getElementById('importJsonFile').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (!Array.isArray(data)) throw new Error('格式错误');
+    if (!confirm(`将导入 ${data.length} 条记录,继续?`)) return;
+    for (const s of data) {
+      const { id, ...rest } = s;
+      await Data.add(rest);
+    }
+    showToast(`✓ 已导入 ${data.length} 条`);
+    await renderAll();
+  } catch (err) {
+    showToast('导入失败: ' + err.message);
+  }
+  e.target.value = '';
+});
+
+document.getElementById('clearAllBtn').addEventListener('click', async () => {
+  if (!confirm('⚠ 删除所有服务器记录,确定?')) return;
+  if (!confirm('再次确认: 真的删除所有?')) return;
+  await Data.clearAll();
+  document.getElementById('settingsModal').classList.remove('show');
+  showToast('已清空');
+  await renderAll();
+});
+
+// 通知:打开 App 时检查到期,弹通知(如果有授权)
+async function checkAndNotify() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission !== 'granted') return;
+  
+  const all = await Data.getAll();
+  const reminderDays = await Data.getSetting('reminderDays') || 7;
+  
+  const upcoming = all
+    .filter(s => s.status !== 'inactive' && s.dueDate)
+    .map(s => ({ ...s, days: daysUntil(s.dueDate) }))
+    .filter(s => s.days !== null && s.days <= reminderDays);
+  
+  // 只在每天第一次打开 App 时通知(避免重复)
+  const today = todayStr();
+  const lastNotifDate = await Data.getSetting('lastNotifDate');
+  if (lastNotifDate === today) return;
+  
+  if (upcoming.length > 0) {
+    const overdue = upcoming.filter(s => s.days < 0).length;
+    const dueToday = upcoming.filter(s => s.days === 0).length;
+    let title = '⚠️ Server Tracker 提醒';
+    let body = '';
+    if (overdue > 0) body += `${overdue} 台服务器已逾期! `;
+    if (dueToday > 0) body += `${dueToday} 台今天到期. `;
+    if (!body) body = `${upcoming.length} 台服务器即将到期`;
+    
+    new Notification(title, { body, icon: './icon-192.png', tag: 'server-tracker-' + today });
+    await Data.setSetting('lastNotifDate', today);
+  }
+}
+
+// ============= INIT =============
+(async () => {
+  await openDB();
+  await renderAll();
+  
+  // 检查通知
+  setTimeout(() => checkAndNotify(), 1500);
+  
+  // Service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
