@@ -3,34 +3,39 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#0d1117">
+<meta name="theme-color" content="#f0f7ff">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="服务器管理">
 <title>Server Tracker · 服务器管理</title>
 <link rel="manifest" href="./manifest.json">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
 :root {
-  --bg: #0d1117;
-  --bg-2: #161b22;
-  --bg-3: #21262d;
-  --bg-4: #30363d;
-  --text: #c9d1d9;
-  --text-2: #8b949e;
-  --text-3: #6e7681;
-  --line: #30363d;
-  --line-soft: #21262d;
-  --accent: #3fb950;       /* 终端绿 */
-  --accent-2: #58a6ff;     /* 蓝 */
-  --warn: #f85149;         /* 红 */
-  --orange: #d29922;
-  --yellow: #e3b341;
-  --purple: #bc8cff;
+  --bg: #f0f7ff;
+  --bg-2: #ffffff;
+  --bg-3: #e0eaf5;
+  --bg-4: #c5d6e8;
+  --text: #0f172a;
+  --text-2: #475569;
+  --text-3: #94a3b8;
+  --line: #cbd5e1;
+  --line-soft: #e2e8f0;
+  --accent: #3b82f6;
+  --accent-dark: #1e40af;
+  --accent-2: #0ea5e9;
+  --green: #10b981;
+  --warn: #ef4444;
+  --orange: #f59e0b;
+  --yellow: #fbbf24;
+  --purple: #8b5cf6;
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 10px 30px rgba(15, 23, 42, 0.10);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -39,12 +44,12 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Noto Sans SC', system-ui, sans-serif;
+  font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
   min-height: 100vh;
   -webkit-tap-highlight-color: transparent;
   background-image: 
-    radial-gradient(circle at 10% 20%, rgba(63, 185, 80, 0.06) 0%, transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(88, 166, 255, 0.04) 0%, transparent 40%);
+    radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, rgba(14, 165, 233, 0.06) 0%, transparent 50%);
 }
 
 #app {
@@ -53,27 +58,27 @@ body {
   padding: 18px 16px 100px;
 }
 
-/* ============ Header ============ */
 .header {
   margin-bottom: 18px;
   padding-bottom: 14px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 2px solid var(--line-soft);
 }
 .header h1 {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 700;
-  color: var(--accent);
-  letter-spacing: 0.02em;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.02em;
   margin-bottom: 4px;
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.header h1::before {
-  content: '$';
-  color: var(--text-3);
-  font-weight: 400;
+.header h1 .icon {
+  font-size: 24px;
+  -webkit-text-fill-color: initial;
 }
 .header .sub {
   font-family: 'JetBrains Mono', monospace;
@@ -82,21 +87,20 @@ body {
   letter-spacing: 0.05em;
 }
 
-/* ============ Alert Banner (到期警告) ============ */
 .alert-banner {
-  background: linear-gradient(135deg, rgba(248, 81, 73, 0.15), rgba(210, 153, 34, 0.1));
-  border: 1px solid var(--warn);
-  border-radius: 8px;
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  border: 1px solid #fca5a5;
+  border-radius: 12px;
   padding: 14px 16px;
   margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
 }
 .alert-banner.empty {
-  background: linear-gradient(135deg, rgba(63, 185, 80, 0.08), rgba(88, 166, 255, 0.05));
-  border-color: var(--accent);
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+  border-color: #6ee7b7;
 }
 .alert-title {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--warn);
   margin-bottom: 8px;
@@ -104,7 +108,7 @@ body {
   align-items: center;
   gap: 6px;
 }
-.alert-banner.empty .alert-title { color: var(--accent); }
+.alert-banner.empty .alert-title { color: var(--green); }
 
 .alert-list {
   display: flex;
@@ -115,15 +119,16 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 10px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 6px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(252, 165, 165, 0.4);
+  border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
   transition: all 0.15s;
 }
 .alert-item:active { transform: scale(0.99); }
-.alert-item:hover { background: rgba(0, 0, 0, 0.4); }
+.alert-item:hover { background: white; box-shadow: var(--shadow-sm); }
 .alert-item-info { flex: 1; min-width: 0; }
 .alert-item-name {
   font-family: 'JetBrains Mono', monospace;
@@ -131,6 +136,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--text);
 }
 .alert-item-meta {
   font-size: 11px;
@@ -138,18 +144,16 @@ body {
   margin-top: 1px;
 }
 .alert-item-status {
-  font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 4px;
+  padding: 4px 10px;
+  border-radius: 12px;
   flex-shrink: 0;
 }
 .status-overdue { background: var(--warn); color: white; }
 .status-today { background: var(--orange); color: white; }
-.status-soon { background: var(--yellow); color: var(--bg); }
+.status-soon { background: var(--yellow); color: var(--text); }
 
-/* ============ Summary Cards ============ */
 .summary {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -158,9 +162,10 @@ body {
 }
 .tile {
   background: var(--bg-2);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-soft);
   padding: 14px;
-  border-radius: 8px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
 }
 .tile .label {
   font-family: 'JetBrains Mono', monospace;
@@ -169,14 +174,16 @@ body {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   margin-bottom: 4px;
+  font-weight: 600;
 }
 .tile .value {
   font-family: 'JetBrains Mono', monospace;
   font-size: 22px;
   font-weight: 700;
+  color: var(--text);
 }
-.tile .value.green { color: var(--accent); }
-.tile .value.blue { color: var(--accent-2); }
+.tile .value.green { color: var(--green); }
+.tile .value.blue { color: var(--accent); }
 .tile .meta {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
@@ -184,7 +191,6 @@ body {
   margin-top: 2px;
 }
 
-/* ============ Action buttons ============ */
 .actions {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -193,24 +199,29 @@ body {
 }
 .action-btn {
   background: var(--bg-2);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-soft);
   color: var(--text);
-  padding: 10px 6px;
-  border-radius: 6px;
+  padding: 12px 6px;
+  border-radius: 10px;
   font-family: inherit;
   font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   transition: all 0.15s;
+  box-shadow: var(--shadow-sm);
 }
 .action-btn:active { transform: scale(0.97); }
-.action-btn:hover { background: var(--bg-3); border-color: var(--accent); }
-.action-btn .icon { font-size: 18px; }
+.action-btn:hover { 
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.action-btn .icon { font-size: 20px; }
 
-/* ============ Search ============ */
 .search-bar {
   position: relative;
   margin-bottom: 14px;
@@ -220,53 +231,56 @@ body {
   background: var(--bg-2);
   border: 1px solid var(--line);
   color: var(--text);
-  padding: 10px 14px 10px 36px;
-  border-radius: 6px;
-  font-family: 'JetBrains Mono', monospace;
+  padding: 11px 14px 11px 38px;
+  border-radius: 10px;
+  font-family: inherit;
   font-size: 13px;
   outline: none;
+  box-shadow: var(--shadow-sm);
 }
 .search-bar input:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 .search-bar::before {
-  content: '⌕';
+  content: '🔍';
   position: absolute;
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--text-3);
-  font-size: 16px;
+  font-size: 14px;
 }
 
-/* ============ Filters ============ */
 .filter-tabs {
   display: flex;
   gap: 6px;
   margin-bottom: 14px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
 }
+.filter-tabs::-webkit-scrollbar { height: 0; }
 .filter-tab {
   background: var(--bg-2);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-soft);
   color: var(--text-2);
-  padding: 6px 12px;
+  padding: 7px 14px;
   border-radius: 14px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s;
 }
 .filter-tab.active {
   background: var(--accent);
-  color: var(--bg);
+  color: white;
   border-color: var(--accent);
   font-weight: 600;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
-/* ============ Server list ============ */
 .server-group {
   margin-bottom: 18px;
 }
@@ -274,16 +288,15 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  padding: 4px 0 8px;
-  margin-bottom: 4px;
+  padding: 4px 4px 8px;
+  margin-bottom: 6px;
   border-bottom: 1px dashed var(--line);
 }
 .server-group-name {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
-  color: var(--accent);
-  letter-spacing: 0.02em;
+  color: var(--accent-dark);
+  letter-spacing: -0.01em;
 }
 .server-group-count {
   font-family: 'JetBrains Mono', monospace;
@@ -293,18 +306,21 @@ body {
 
 .server-card {
   background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
   padding: 12px 14px;
   margin-bottom: 8px;
-  cursor: pointer;
   transition: all 0.15s;
   position: relative;
+  box-shadow: var(--shadow-sm);
 }
-.server-card:active { transform: scale(0.99); }
-.server-card:hover { border-color: var(--accent); }
+.server-card:hover { 
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+}
 .server-card.disabled {
   opacity: 0.5;
+  background: var(--bg-3);
 }
 .server-card.disabled::before {
   content: 'INACTIVE';
@@ -315,53 +331,80 @@ body {
   font-size: 9px;
   font-weight: 700;
   color: var(--text-3);
-  background: var(--bg-3);
+  background: var(--bg);
   padding: 2px 6px;
   border-radius: 3px;
   letter-spacing: 0.1em;
+  border: 1px solid var(--line);
 }
 .server-card.overdue {
   border-color: var(--warn);
-  background: linear-gradient(135deg, rgba(248, 81, 73, 0.08), var(--bg-2));
+  background: linear-gradient(135deg, #fef2f2, white);
+  box-shadow: 0 0 0 1px var(--warn), var(--shadow-sm);
 }
 .server-card.due-soon {
   border-color: var(--orange);
+  background: linear-gradient(135deg, #fffbeb, white);
 }
 
-.server-ip {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--accent-2);
-  margin-bottom: 4px;
+.server-ip-row {
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-bottom: 6px;
 }
-.server-ip .copy-btn {
-  background: none;
-  border: 1px solid var(--line);
-  color: var(--text-3);
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 10px;
+.server-ip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent-dark);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.icon-btn {
+  background: var(--bg-3);
+  border: 1px solid var(--line-soft);
+  color: var(--text-2);
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 11px;
   font-family: inherit;
+  font-weight: 500;
   cursor: pointer;
-  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.15s;
 }
-.server-ip .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
-.server-ip .copy-btn.copied { color: var(--accent); border-color: var(--accent); }
+.icon-btn:hover { 
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.icon-btn.copied { 
+  background: var(--green); 
+  color: white;
+  border-color: var(--green);
+}
+.icon-btn.edit-btn:hover {
+  background: var(--purple);
+  border-color: var(--purple);
+}
 
 .server-meta {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-2);
   font-family: 'JetBrains Mono', monospace;
+  align-items: center;
 }
 .server-meta .price {
-  color: var(--yellow);
+  color: var(--orange);
   font-weight: 600;
 }
 .server-meta .due-date {
@@ -370,63 +413,105 @@ body {
 .server-meta .due-date.overdue { color: var(--warn); font-weight: 700; }
 .server-meta .due-date.soon { color: var(--orange); font-weight: 600; }
 
+.quick-action {
+  background: var(--bg);
+  border: 1px dashed var(--line);
+  color: var(--text-3);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.quick-action:hover {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  border-style: solid;
+}
+
 .server-note {
   font-size: 11px;
-  color: var(--text-3);
+  color: var(--text-2);
   margin-top: 4px;
   font-style: italic;
 }
 
-/* ============ FAB / Buttons ============ */
+.add-ip-to-group {
+  background: var(--bg);
+  border: 1px dashed var(--line);
+  color: var(--text-2);
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-top: 4px;
+}
+.add-ip-to-group:hover {
+  background: rgba(59, 130, 246, 0.08);
+  color: var(--accent);
+  border-color: var(--accent);
+  border-style: solid;
+}
+
 .fab {
   position: fixed;
   bottom: 24px;
   right: 24px;
   width: 56px;
   height: 56px;
-  background: var(--accent);
-  color: var(--bg);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: white;
   border: none;
   border-radius: 50%;
   font-size: 28px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(63, 185, 80, 0.4);
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
   z-index: 50;
+  transition: all 0.15s;
 }
 .fab:active { transform: scale(0.92); }
+.fab:hover { box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5); }
 
 .btn {
-  background: var(--accent);
-  color: var(--bg);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: white;
   border: none;
   padding: 12px 20px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   width: 100%;
   transition: all 0.15s;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
 }
 .btn:active { transform: scale(0.98); }
-.btn:hover { background: #2ea043; }
+.btn:hover { box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4); }
 .btn-ghost {
-  background: var(--bg-3);
+  background: var(--bg-2);
   color: var(--text);
   border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
 }
-.btn-ghost:hover { background: var(--bg-4); }
+.btn-ghost:hover { background: var(--bg-3); box-shadow: var(--shadow-md); }
 .btn-danger {
   background: var(--warn);
   color: white;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
 }
 
-/* ============ Modal ============ */
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(15, 23, 42, 0.5);
   display: none;
   align-items: flex-end;
   justify-content: center;
@@ -436,14 +521,13 @@ body {
 .modal.show { display: flex; }
 .modal-content {
   background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-bottom: none;
   width: 100%;
   max-width: 480px;
   max-height: 90vh;
   overflow-y: auto;
   padding: 20px 18px 30px;
   border-radius: 16px 16px 0 0;
+  box-shadow: 0 -10px 40px rgba(15, 23, 42, 0.2);
 }
 .modal-header {
   display: flex;
@@ -451,32 +535,33 @@ body {
   align-items: center;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--line-soft);
 }
 .modal-title {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--accent);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--accent-dark);
 }
 .modal-close {
-  background: none;
+  background: var(--bg-3);
   border: none;
-  color: var(--text-3);
-  font-size: 22px;
+  color: var(--text-2);
+  font-size: 18px;
   cursor: pointer;
-  padding: 0 4px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  line-height: 1;
 }
+.modal-close:hover { background: var(--bg-4); }
 
-/* ============ Form fields ============ */
 .field-label {
   display: block;
-  font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   color: var(--text-2);
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
+  font-weight: 600;
 }
 .form-group { margin-bottom: 14px; }
 .form-row {
@@ -488,25 +573,22 @@ body {
 
 input, select, textarea {
   width: 100%;
-  background: var(--bg);
+  background: var(--bg-2);
   border: 1px solid var(--line);
   color: var(--text);
-  padding: 10px 12px;
+  padding: 11px 12px;
   font-family: inherit;
   font-size: 14px;
-  border-radius: 6px;
+  border-radius: 8px;
   outline: none;
+  transition: all 0.15s;
 }
-input:focus, select:focus, textarea:focus { border-color: var(--accent); }
-input[type="number"] {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 600;
+input:focus, select:focus, textarea:focus { 
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
-input[type="date"] {
-  font-family: 'JetBrains Mono', monospace;
-  color-scheme: dark;
-}
-
+input[type="number"] { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+input[type="date"] { font-family: 'JetBrains Mono', monospace; }
 textarea {
   resize: vertical;
   min-height: 80px;
@@ -514,92 +596,76 @@ textarea {
   font-size: 12px;
 }
 
-.toggle-row {
-  display: flex;
-  gap: 10px;
-}
+.toggle-row { display: flex; gap: 10px; }
 .toggle-btn {
   flex: 1;
-  background: var(--bg);
+  background: var(--bg-2);
   border: 1px solid var(--line);
   color: var(--text-2);
   padding: 10px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-family: inherit;
   font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
 }
 .toggle-btn.active {
   background: var(--accent);
-  color: var(--bg);
+  color: white;
   border-color: var(--accent);
   font-weight: 600;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
 }
 .toggle-btn.danger.active {
   background: var(--warn);
   border-color: var(--warn);
-  color: white;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
 }
 
-/* ============ Toast ============ */
 .toast {
   position: fixed;
   bottom: 100px;
   left: 50%;
   transform: translateX(-50%) translateY(20px);
-  background: var(--bg-3);
-  border: 1px solid var(--accent);
-  color: var(--text);
-  padding: 10px 18px;
-  border-radius: 6px;
-  font-family: 'JetBrains Mono', monospace;
+  background: var(--text);
+  color: white;
+  padding: 11px 20px;
+  border-radius: 8px;
   font-size: 13px;
+  font-weight: 500;
   opacity: 0;
   pointer-events: none;
   transition: all 0.3s;
   z-index: 1000;
   white-space: nowrap;
+  box-shadow: var(--shadow-lg);
 }
-.toast.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* ============ Empty state ============ */
 .empty {
   text-align: center;
   padding: 60px 20px;
   color: var(--text-3);
 }
-.empty .icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-  opacity: 0.4;
-}
-.empty .text {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-}
+.empty .icon { font-size: 56px; margin-bottom: 16px; opacity: 0.5; }
+.empty .text { font-size: 14px; line-height: 1.6; }
 
 .hidden { display: none !important; }
 
-/* 滚动条 */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-3); }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
 </style>
 </head>
 <body>
 
 <div id="app">
   <header class="header">
-    <h1>./server-tracker</h1>
-    <div class="sub"># manage your VPS subscriptions · 服务器订阅管理</div>
+    <h1><span class="icon">🖥️</span><span>服务器管理</span></h1>
+    <div class="sub">// VPS subscriptions &amp; renewal reminder</div>
   </header>
 
-  <!-- 到期警告 -->
   <div id="alertBanner" class="alert-banner empty">
     <div class="alert-title">
       <span id="alertIcon">✓</span>
@@ -608,7 +674,6 @@ textarea {
     <div class="alert-list" id="alertList"></div>
   </div>
 
-  <!-- 总览 -->
   <div class="summary">
     <div class="tile">
       <div class="label">月度支出</div>
@@ -618,11 +683,10 @@ textarea {
     <div class="tile">
       <div class="label">下次到期</div>
       <div class="value blue" id="nextDue">—</div>
-      <div class="meta" id="nextDueName">—</div>
+      <div class="meta" id="nextDueName">尚未设置到期日</div>
     </div>
   </div>
 
-  <!-- Action buttons -->
   <div class="actions">
     <button class="action-btn" id="importBtn">
       <span class="icon">📥</span>
@@ -638,12 +702,10 @@ textarea {
     </button>
   </div>
 
-  <!-- 搜索 -->
   <div class="search-bar">
     <input type="text" id="searchInput" placeholder="搜索 IP / 供应商 / 备注..." autocomplete="off">
   </div>
 
-  <!-- 筛选 -->
   <div class="filter-tabs">
     <button class="filter-tab active" data-filter="all">全部</button>
     <button class="filter-tab" data-filter="active">启用</button>
@@ -652,14 +714,11 @@ textarea {
     <button class="filter-tab" data-filter="inactive">已停用</button>
   </div>
 
-  <!-- 服务器列表 -->
   <div id="serverList"></div>
 
-  <!-- FAB -->
   <button class="fab" id="addBtn" title="添加服务器">+</button>
 </div>
 
-<!-- 服务器编辑模态框 -->
 <div class="modal" id="serverModal">
   <div class="modal-content">
     <div class="modal-header">
@@ -702,7 +761,7 @@ textarea {
     <div class="form-group">
       <label class="field-label">下次到期日 ⚠️</label>
       <input type="date" id="inDueDate">
-      <div style="font-size: 11px; color: var(--text-3); margin-top: 4px; font-family: 'JetBrains Mono', monospace;">
+      <div style="font-size: 11px; color: var(--text-3); margin-top: 4px;">
         每次续费后,自动 +1 周期
       </div>
     </div>
@@ -724,7 +783,6 @@ textarea {
   </div>
 </div>
 
-<!-- 设置模态框 -->
 <div class="modal" id="settingsModal">
   <div class="modal-content">
     <div class="modal-header">
@@ -735,7 +793,7 @@ textarea {
     <div class="form-group">
       <label class="field-label">提醒提前天数</label>
       <input type="number" id="reminderDays" min="1" max="30" value="7">
-      <div style="font-size: 11px; color: var(--text-3); margin-top: 4px; font-family: 'JetBrains Mono', monospace;">
+      <div style="font-size: 11px; color: var(--text-3); margin-top: 4px;">
         到期前 X 天开始提醒
       </div>
     </div>
@@ -743,7 +801,7 @@ textarea {
     <div class="form-group">
       <label class="field-label">浏览器通知</label>
       <button class="btn btn-ghost" id="enableNotifBtn">🔔 开启浏览器通知</button>
-      <div id="notifStatus" style="font-size: 11px; color: var(--text-3); margin-top: 6px; font-family: 'JetBrains Mono', monospace;"></div>
+      <div id="notifStatus" style="font-size: 11px; color: var(--text-3); margin-top: 6px;"></div>
     </div>
     
     <div class="form-group">
@@ -756,7 +814,6 @@ textarea {
   </div>
 </div>
 
-<!-- 导入 txt 模态框 -->
 <div class="modal" id="importModal">
   <div class="modal-content">
     <div class="modal-header">
@@ -766,9 +823,8 @@ textarea {
     
     <div style="font-size: 13px; color: var(--text-2); margin-bottom: 12px; line-height: 1.6;">
       支持你那种格式:<br>
-      <code style="font-family: 'JetBrains Mono', monospace; background: var(--bg); padding: 2px 6px; border-radius: 3px; font-size: 11px;">供应商名</code><br>
-      <code style="font-family: 'JetBrains Mono', monospace; background: var(--bg); padding: 2px 6px; border-radius: 3px; font-size: 11px;">- IP1 (备注)</code><br>
-      <code style="font-family: 'JetBrains Mono', monospace; background: var(--bg); padding: 2px 6px; border-radius: 3px; font-size: 11px;">- IP2</code>
+      <code style="font-family: 'JetBrains Mono', monospace; background: var(--bg-3); padding: 2px 6px; border-radius: 3px; font-size: 11px;">供应商名</code><br>
+      <code style="font-family: 'JetBrains Mono', monospace; background: var(--bg-3); padding: 2px 6px; border-radius: 3px; font-size: 11px;">- IP1 (备注)</code>
     </div>
     
     <div class="form-group">
@@ -790,7 +846,6 @@ textarea {
 <div class="toast" id="toast"></div>
 
 <script>
-// ============= DB =============
 const DB_NAME = 'serverTrackerDB';
 const DB_VERSION = 1;
 let db;
@@ -872,7 +927,6 @@ const Data = {
   }
 };
 
-// ============= UTILS =============
 function todayStr() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -893,8 +947,6 @@ function showToast(msg) {
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2000);
 }
-
-// 加 1 个周期到日期
 function addPeriod(dateStr, cycle) {
   const d = new Date(dateStr + 'T00:00:00');
   if (cycle === 'monthly') d.setMonth(d.getMonth() + 1);
@@ -902,17 +954,19 @@ function addPeriod(dateStr, cycle) {
   else if (cycle === 'yearly') d.setFullYear(d.getFullYear() + 1);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-
-// 月度费用 (按周期换算)
 function monthlyPrice(price, cycle) {
   if (!price) return 0;
   if (cycle === 'monthly') return price;
   if (cycle === 'quarterly') return price / 3;
   if (cycle === 'yearly') return price / 12;
-  return 0;  // once 不算
+  return 0;
+}
+function formatShortDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-// ============= 解析 txt =============
 function parseServerListTxt(text) {
   const lines = text.split('\n').map(l => l.trim());
   const servers = [];
@@ -921,31 +975,25 @@ function parseServerListTxt(text) {
   for (const line of lines) {
     if (!line) continue;
     
-    // 是否是 IP 行 (以 - 开头,或者直接是 IP)
     if (line.startsWith('-') || line.startsWith('•') || line.startsWith('*')) {
       const rest = line.replace(/^[-•*]\s*/, '').trim();
-      // 提取 IP 和括号内的备注
       const ipMatch = rest.match(/^([\d.]+|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
       if (ipMatch) {
         const ip = ipMatch[1];
         const after = rest.slice(ipMatch[0].length).trim();
-        // 提取括号内的备注 (中文括号或英文括号)
         let label = '';
         let inactive = false;
         const noteMatch = after.match(/[（(]([^）)]+)[）)]/);
         if (noteMatch) {
           label = noteMatch[1].trim();
-          // 检测停用关键词
           if (/没用了|不用了|用不到|废弃|停用|inactive|disabled|expired/i.test(label)) {
             inactive = true;
           }
         }
-        // 任何剩余文字都加到 label
         const remaining = after.replace(/[（(][^）)]+[）)]/, '').trim();
         if (remaining && !label.includes(remaining)) {
           label = label ? `${label} · ${remaining}` : remaining;
         }
-        // 检测停用关键词在 label 之外
         if (/没用了|不用了|用不到/i.test(after)) inactive = true;
         
         servers.push({
@@ -960,10 +1008,7 @@ function parseServerListTxt(text) {
         });
       }
     } else {
-      // 这是供应商名(可能后面有 URL 等)
-      // 去掉 https://... 部分作为干净的供应商名
       let provider = line.replace(/https?:\/\/\S+/g, '').trim();
-      // 去掉末尾的标点和空白
       provider = provider.replace(/[:：]$/, '').trim();
       if (provider) currentProvider = provider;
     }
@@ -972,31 +1017,24 @@ function parseServerListTxt(text) {
   return servers;
 }
 
-// ============= RENDER =============
 let currentFilter = 'all';
 let currentSearch = '';
 let editingServerId = null;
 let pendingServerStatus = 'active';
+let prefilledProvider = '';
 
 async function renderAll() {
   const all = await Data.getAll();
-  
-  // 警告横幅
-  renderAlertBanner(all);
-  
-  // 总览
+  await renderAlertBanner(all);
   renderSummary(all);
-  
-  // 列表
   renderServerList(all);
 }
 
-function renderAlertBanner(all) {
-  const reminderDays = 7;  // TODO: 从设置读
+async function renderAlertBanner(all) {
+  const reminderDays = (await Data.getSetting('reminderDays')) || 7;
   const banner = document.getElementById('alertBanner');
   const list = document.getElementById('alertList');
   
-  // 找出所有有到期日的活跃服务器
   const upcoming = all
     .filter(s => s.status !== 'inactive' && s.dueDate)
     .map(s => ({ ...s, days: daysUntil(s.dueDate) }))
@@ -1044,13 +1082,11 @@ function renderAlertBanner(all) {
 }
 
 function renderSummary(all) {
-  // 月度支出 = 所有 active 服务器的月度等价费用之和
   const active = all.filter(s => s.status !== 'inactive');
   const total = active.reduce((sum, s) => sum + monthlyPrice(s.price || 0, s.cycle || 'monthly'), 0);
   document.getElementById('monthlyTotal').textContent = `RM ${total.toFixed(0)}`;
   document.getElementById('activeCount').textContent = `${active.length} active · ${all.length} total`;
   
-  // 下次到期
   const upcoming = active
     .filter(s => s.dueDate)
     .map(s => ({ ...s, days: daysUntil(s.dueDate) }))
@@ -1070,7 +1106,6 @@ function renderSummary(all) {
 function renderServerList(all) {
   let filtered = all;
   
-  // 搜索过滤
   if (currentSearch) {
     const q = currentSearch.toLowerCase();
     filtered = filtered.filter(s => 
@@ -1080,7 +1115,6 @@ function renderServerList(all) {
     );
   }
   
-  // 状态过滤
   if (currentFilter === 'active') {
     filtered = filtered.filter(s => s.status !== 'inactive');
   } else if (currentFilter === 'inactive') {
@@ -1110,70 +1144,78 @@ function renderServerList(all) {
     return;
   }
   
-  // 按供应商分组
   const grouped = {};
+  const providerOrder = [];
   filtered.forEach(s => {
     const p = s.provider || '(无供应商)';
-    if (!grouped[p]) grouped[p] = [];
+    if (!grouped[p]) {
+      grouped[p] = [];
+      providerOrder.push(p);
+    }
     grouped[p].push(s);
   });
   
-  container.innerHTML = Object.entries(grouped).map(([provider, servers]) => `
-    <div class="server-group">
-      <div class="server-group-header">
-        <div class="server-group-name">${escapeHtml(provider)}</div>
-        <div class="server-group-count">${servers.length} server${servers.length > 1 ? 's' : ''}</div>
-      </div>
-      ${servers.map(s => {
-        const days = s.dueDate ? daysUntil(s.dueDate) : null;
-        let cardClass = 'server-card';
-        if (s.status === 'inactive') cardClass += ' disabled';
-        else if (days !== null && days < 0) cardClass += ' overdue';
-        else if (days !== null && days <= 7) cardClass += ' due-soon';
-        
-        let dueClass = '';
-        let dueText = '';
-        if (s.dueDate) {
-          if (days < 0) {
-            dueClass = 'overdue';
-            dueText = `⚠ 逾期 ${Math.abs(days)} 天`;
-          } else if (days === 0) {
-            dueClass = 'overdue';
-            dueText = '⚠ 今天到期';
-          } else if (days <= 7) {
-            dueClass = 'soon';
-            dueText = `📅 ${days} 天后`;
-          } else {
-            dueText = `📅 ${s.dueDate}`;
+  container.innerHTML = providerOrder.map(provider => {
+    const servers = grouped[provider];
+    return `
+      <div class="server-group">
+        <div class="server-group-header">
+          <div class="server-group-name">${escapeHtml(provider)}</div>
+          <div class="server-group-count">${servers.length} server${servers.length > 1 ? 's' : ''}</div>
+        </div>
+        ${servers.map(s => {
+          const days = s.dueDate ? daysUntil(s.dueDate) : null;
+          let cardClass = '';
+          if (s.status === 'inactive') cardClass = 'disabled';
+          else if (days !== null && days < 0) cardClass = 'overdue';
+          else if (days !== null && days <= 7) cardClass = 'due-soon';
+          
+          let dueClass = '';
+          let dueText = '';
+          if (s.dueDate) {
+            if (days < 0) {
+              dueClass = 'overdue';
+              dueText = `⚠ 逾期 ${Math.abs(days)} 天`;
+            } else if (days === 0) {
+              dueClass = 'overdue';
+              dueText = '⚠ 今天到期';
+            } else if (days <= 7) {
+              dueClass = 'soon';
+              dueText = `📅 ${days} 天后 (${formatShortDate(s.dueDate)})`;
+            } else {
+              dueText = `📅 ${s.dueDate}`;
+            }
           }
-        }
-        
-        return `
-          <div class="server-card ${cardClass.replace('server-card ', '')}" data-id="${s.id}">
-            <div class="server-ip">
-              <span>${escapeHtml(s.ip)}</span>
-              <button class="copy-btn" data-ip="${escapeHtml(s.ip)}">📋 copy</button>
+          
+          return `
+            <div class="server-card ${cardClass}">
+              <div class="server-ip-row">
+                <span class="server-ip">${escapeHtml(s.ip)}</span>
+                <button class="icon-btn copy-btn" data-ip="${escapeHtml(s.ip)}">📋 copy</button>
+                <button class="icon-btn edit-btn" data-id="${s.id}">✎ edit</button>
+              </div>
+              <div class="server-meta">
+                ${s.price > 0 ? `<span class="price">RM ${s.price}/${s.cycle === 'monthly' ? 'mo' : s.cycle === 'quarterly' ? 'qtr' : s.cycle === 'yearly' ? 'yr' : 'once'}</span>` : `<button class="quick-action quick-set-price" data-id="${s.id}">+ 设月费</button>`}
+                ${dueText ? `<span class="due-date ${dueClass}">${dueText}</span>` : `<button class="quick-action quick-set-date" data-id="${s.id}">+ 设到期日</button>`}
+              </div>
+              ${s.label ? `<div class="server-note">${escapeHtml(s.label)}</div>` : ''}
             </div>
-            <div class="server-meta">
-              ${s.price > 0 ? `<span class="price">RM ${s.price}/${s.cycle === 'monthly' ? 'mo' : s.cycle === 'quarterly' ? 'qtr' : s.cycle === 'yearly' ? 'yr' : 'once'}</span>` : ''}
-              ${dueText ? `<span class="due-date ${dueClass}">${dueText}</span>` : ''}
-            </div>
-            ${s.label ? `<div class="server-note">${escapeHtml(s.label)}</div>` : ''}
-          </div>
-        `;
-      }).join('')}
-    </div>
-  `).join('');
+          `;
+        }).join('')}
+        <button class="add-ip-to-group" data-provider="${escapeHtml(provider)}">
+          + 添加 IP 到 ${escapeHtml(provider)}
+        </button>
+      </div>
+    `;
+  }).join('');
   
-  // 点击编辑
-  container.querySelectorAll('.server-card').forEach(card => {
-    card.addEventListener('click', (e) => {
-      if (e.target.classList.contains('copy-btn')) return;
-      openServerEdit(parseInt(card.dataset.id));
+  container.querySelectorAll('.edit-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openServerEdit(parseInt(btn.dataset.id));
     });
   });
   
-  // 复制 IP
   container.querySelectorAll('.copy-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1188,9 +1230,37 @@ function renderServerList(all) {
       });
     });
   });
+  
+  container.querySelectorAll('.quick-set-price').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await openServerEdit(parseInt(btn.dataset.id));
+      setTimeout(() => document.getElementById('inPrice').focus(), 200);
+    });
+  });
+  
+  container.querySelectorAll('.quick-set-date').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await openServerEdit(parseInt(btn.dataset.id));
+      setTimeout(() => {
+        const dateInput = document.getElementById('inDueDate');
+        dateInput.focus();
+        if (typeof dateInput.showPicker === 'function') {
+          try { dateInput.showPicker(); } catch (e) {}
+        }
+      }, 200);
+    });
+  });
+  
+  container.querySelectorAll('.add-ip-to-group').forEach(btn => {
+    btn.addEventListener('click', () => {
+      prefilledProvider = btn.dataset.provider;
+      openServerEdit(null);
+    });
+  });
 }
 
-// ============= 模态框: 添加/编辑 =============
 async function openServerEdit(id = null) {
   editingServerId = id;
   
@@ -1208,10 +1278,11 @@ async function openServerEdit(id = null) {
     pendingServerStatus = s.status || 'active';
     document.getElementById('deleteServerBtn').classList.remove('hidden');
     document.getElementById('renewBtn').style.display = s.dueDate ? 'block' : 'none';
+    prefilledProvider = '';
   } else {
-    document.getElementById('modalTitle').textContent = '添加服务器';
+    document.getElementById('modalTitle').textContent = prefilledProvider ? `添加到 ${prefilledProvider}` : '添加服务器';
     document.getElementById('inIp').value = '';
-    document.getElementById('inProvider').value = '';
+    document.getElementById('inProvider').value = prefilledProvider || '';
     document.getElementById('inLabel').value = '';
     document.getElementById('inPrice').value = '';
     document.getElementById('inCycle').value = 'monthly';
@@ -1221,16 +1292,20 @@ async function openServerEdit(id = null) {
     document.getElementById('renewBtn').style.display = 'none';
   }
   
-  // 同步状态按钮
   document.querySelectorAll('.toggle-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.status === pendingServerStatus);
   });
   
   document.getElementById('serverModal').classList.add('show');
+  
+  if (!id) {
+    setTimeout(() => document.getElementById('inIp').focus(), 200);
+  }
 }
 
 document.getElementById('modalClose').addEventListener('click', () => {
   document.getElementById('serverModal').classList.remove('show');
+  prefilledProvider = '';
 });
 
 document.querySelectorAll('.toggle-btn').forEach(b => {
@@ -1266,6 +1341,7 @@ document.getElementById('saveServerBtn').addEventListener('click', async () => {
   }
   
   document.getElementById('serverModal').classList.remove('show');
+  prefilledProvider = '';
   await renderAll();
 });
 
@@ -1278,21 +1354,23 @@ document.getElementById('deleteServerBtn').addEventListener('click', async () =>
   await renderAll();
 });
 
-// 续费按钮
 document.getElementById('renewBtn').addEventListener('click', async () => {
   if (!editingServerId) return;
   const all = await Data.getAll();
   const s = all.find(x => x.id === editingServerId);
   if (!s || !s.dueDate) return;
   
-  const newDate = addPeriod(s.dueDate, s.cycle || 'monthly');
+  const currentDate = document.getElementById('inDueDate').value || s.dueDate;
+  const newDate = addPeriod(currentDate, document.getElementById('inCycle').value || s.cycle || 'monthly');
   document.getElementById('inDueDate').value = newDate;
   showToast(`✓ 到期日已续 → ${newDate}`);
 });
 
-document.getElementById('addBtn').addEventListener('click', () => openServerEdit(null));
+document.getElementById('addBtn').addEventListener('click', () => {
+  prefilledProvider = '';
+  openServerEdit(null);
+});
 
-// ============= 搜索 / 过滤 =============
 document.getElementById('searchInput').addEventListener('input', (e) => {
   currentSearch = e.target.value;
   Data.getAll().then(all => renderServerList(all));
@@ -1307,7 +1385,6 @@ document.querySelectorAll('.filter-tab').forEach(t => {
   });
 });
 
-// ============= 导入 txt =============
 document.getElementById('importBtn').addEventListener('click', () => {
   document.getElementById('importText').value = '';
   document.getElementById('importPreview').innerHTML = '';
@@ -1338,23 +1415,22 @@ document.getElementById('parseImportBtn').addEventListener('click', async () => 
   
   if (servers.length === 0) {
     document.getElementById('importPreview').innerHTML = `
-      <div style="color: var(--warn); font-size: 13px; padding: 10px; background: rgba(248, 81, 73, 0.1); border-radius: 6px;">
+      <div style="color: var(--warn); font-size: 13px; padding: 10px; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px;">
         ✗ 没解析到服务器,检查格式是否正确
       </div>
     `;
     return;
   }
   
-  // 显示预览
   document.getElementById('importPreview').innerHTML = `
-    <div style="font-size: 12px; color: var(--text-2); margin-bottom: 8px; font-family: 'JetBrains Mono', monospace;">
+    <div style="font-size: 12px; color: var(--text-2); margin-bottom: 8px;">
       ✓ 解析到 ${servers.length} 个服务器:
     </div>
-    <div style="background: var(--bg); border-radius: 6px; padding: 10px; max-height: 200px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px;">
+    <div style="background: var(--bg); border: 1px solid var(--line-soft); border-radius: 8px; padding: 10px; max-height: 200px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px;">
       ${servers.map(s => `
         <div style="padding: 4px 0; border-bottom: 1px dashed var(--line-soft); color: ${s.status === 'inactive' ? 'var(--text-3)' : 'var(--text)'};">
-          <span style="color: var(--accent);">${escapeHtml(s.provider || '—')}</span> · 
-          <span style="color: var(--accent-2);">${escapeHtml(s.ip)}</span>
+          <span style="color: var(--accent-dark); font-weight: 600;">${escapeHtml(s.provider || '—')}</span> · 
+          <span style="color: var(--accent);">${escapeHtml(s.ip)}</span>
           ${s.label ? ` <span style="color: var(--text-3);">(${escapeHtml(s.label)})</span>` : ''}
           ${s.status === 'inactive' ? ' <span style="color: var(--warn); font-size: 10px;">[INACTIVE]</span>' : ''}
         </div>
@@ -1373,12 +1449,10 @@ document.getElementById('parseImportBtn').addEventListener('click', async () => 
   });
 });
 
-// ============= 设置 =============
 document.getElementById('settingsBtn').addEventListener('click', async () => {
-  const days = await Data.getSetting('reminderDays') || 7;
+  const days = (await Data.getSetting('reminderDays')) || 7;
   document.getElementById('reminderDays').value = days;
   
-  // 通知状态
   if ('Notification' in window) {
     const status = Notification.permission;
     document.getElementById('notifStatus').textContent = `状态: ${status === 'granted' ? '✓ 已开启' : status === 'denied' ? '✗ 被禁止 (浏览器设置里允许)' : '未授权'}`;
@@ -1465,20 +1539,18 @@ document.getElementById('clearAllBtn').addEventListener('click', async () => {
   await renderAll();
 });
 
-// 通知:打开 App 时检查到期,弹通知(如果有授权)
 async function checkAndNotify() {
   if (!('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
   
   const all = await Data.getAll();
-  const reminderDays = await Data.getSetting('reminderDays') || 7;
+  const reminderDays = (await Data.getSetting('reminderDays')) || 7;
   
   const upcoming = all
     .filter(s => s.status !== 'inactive' && s.dueDate)
     .map(s => ({ ...s, days: daysUntil(s.dueDate) }))
     .filter(s => s.days !== null && s.days <= reminderDays);
   
-  // 只在每天第一次打开 App 时通知(避免重复)
   const today = todayStr();
   const lastNotifDate = await Data.getSetting('lastNotifDate');
   if (lastNotifDate === today) return;
@@ -1497,15 +1569,12 @@ async function checkAndNotify() {
   }
 }
 
-// ============= INIT =============
 (async () => {
   await openDB();
   await renderAll();
   
-  // 检查通知
   setTimeout(() => checkAndNotify(), 1500);
   
-  // Service worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
