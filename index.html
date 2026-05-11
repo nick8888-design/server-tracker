@@ -885,10 +885,13 @@ textarea {
       <label class="field-label">数据</label>
       <button class="btn btn-ghost" id="exportTxtBtn" style="margin-bottom: 6px;">📄 导出 TXT (像原始格式)</button>
       <button class="btn btn-ghost" id="exportTxtFullBtn" style="margin-bottom: 6px;">📋 导出 TXT (含账号密码)</button>
+      <button class="btn btn-ghost" id="exportCsvBtn" style="margin-bottom: 6px;">📊 导出 CSV (Excel 用)</button>
       <button class="btn btn-ghost" id="exportJsonBtn" style="margin-bottom: 6px;">📦 导出 JSON 备份</button>
       <button class="btn btn-ghost" id="importJsonBtn" style="margin-bottom: 6px;">📥 导入 JSON 备份</button>
+      <button class="btn btn-ghost" id="importCsvBtn" style="margin-bottom: 6px;">📊 导入 CSV (Excel)</button>
       <button class="btn btn-danger" id="clearAllBtn">⚠ 清空所有数据</button>
       <input type="file" id="importJsonFile" accept=".json" style="display: none;">
+      <input type="file" id="importCsvFile" accept=".csv" style="display: none;">
     </div>
   </div>
 </div>
@@ -1676,6 +1679,52 @@ document.getElementById('exportJsonBtn').addEventListener('click', async () => {
   showToast('✓ 已下载备份');
 });
 
+// ============= 导出 CSV (Excel 用) =============
+document.getElementById('exportCsvBtn').addEventListener('click', async () => {
+  const all = await Data.getAll();
+  if (all.length === 0) { showToast('没有数据可导出'); return; }
+  
+  // CSV 字段转义
+  function csvEscape(v) {
+    if (v === null || v === undefined) return '';
+    const s = String(v);
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return '"' + s + '"';  // 全部加引号,Excel 显示一致
+  }
+  
+  const headers = ['ip', 'provider', 'label', 'price', 'cycle', 'dueDate', 'status', 'username', 'port', 'password', 'createdAt', 'id'];
+  const rows = [headers.join(',')];
+  all.forEach(s => {
+    rows.push([
+      csvEscape(s.ip),
+      csvEscape(s.provider),
+      csvEscape(s.label),
+      csvEscape(s.price || 0),
+      csvEscape(s.cycle || 'monthly'),
+      csvEscape(s.dueDate),
+      csvEscape(s.status || 'active'),
+      csvEscape(s.username),
+      csvEscape(s.port),
+      csvEscape(s.password),
+      csvEscape(s.createdAt),
+      csvEscape(s.id)
+    ].join(','));
+  });
+  
+  // BOM 让 Excel 正确识别 UTF-8
+  const csv = '\uFEFF' + rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `servers_${todayStr()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✓ 已导出 CSV');
+});
+
 // ============= 导出 TXT (原始格式 - 无密码) =============
 function downloadTxt(text, filename) {
   // BOM + UTF-8 让 Windows 记事本正确显示中文
@@ -1826,6 +1875,146 @@ document.getElementById('importJsonFile').addEventListener('change', async (e) =
     await renderAll();
   } catch (err) {
     showToast('导入失败: ' + err.message);
+  }
+  e.target.value = '';
+});
+
+// ============= CSV 导入 =============
+// 解析 CSV 行 (支持引号包裹字段、引号内的逗号)
+function parseCsvLine(line) {
+  const result = [];
+  let current = '';
+  let inQuote = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuote && line[i + 1] === '"') {
+        // 转义引号 ""
+        current += '"';
+        i++;
+      } else {
+        inQuote = !inQuote;
+      }
+    } else if (ch === ',' && !inQuote) {
+      result.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current);
+  return result;
+}
+
+document.getElementById('importCsvBtn').addEventListener('click', () => {
+  document.getElementById('importCsvFile').click();
+});
+
+document.getElementById('importCsvFile').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    let text = await file.text();
+    // 去掉 BOM
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) throw new Error('CSV 文件太短(至少要有表头+1 行数据)');
+    
+    // 解析表头
+    const headers = parseCsvLine(lines[0]).map(h => h.trim().toLowerCase());
+    
+    // 标准字段映射(支持中英文表头)
+    const fieldMap = {
+      ip: ['ip', 'ip地址', 'address'],
+      provider: ['provider', '供应商', 'host', '服务商'],
+      label: ['label', '备注', 'note', 'remark', '标签'],
+      price: ['price', '价格', '月费', 'cost', 'amount', '费用'],
+      cycle: ['cycle', '周期', 'period'],
+      dueDate: ['duedate', 'due_date', '到期日', '到期', 'expiry', 'expire'],
+      status: ['status', '状态', 'state'],
+      username: ['username', '账号', 'user', '用户名'],
+      port: ['port', '端口'],
+      password: ['password', '密码', 'pwd']
+    };
+    
+    // 找出每个字段在 CSV 里的列索引
+    const colIdx = {};
+    for (const [field, aliases] of Object.entries(fieldMap)) {
+      for (let i = 0; i < headers.length; i++) {
+        if (aliases.includes(headers[i])) {
+          colIdx[field] = i;
+          break;
+        }
+      }
+    }
+    
+    if (colIdx.ip === undefined) {
+      throw new Error('找不到 IP 列(CSV 表头必须有 "ip" 或 "IP 地址")');
+    }
+    
+    // 解析每一行
+    const servers = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = parseCsvLine(lines[i]);
+      const ip = (cols[colIdx.ip] || '').trim();
+      if (!ip) continue;  // 跳过空 IP 行
+      
+      const cycleRaw = colIdx.cycle !== undefined ? (cols[colIdx.cycle] || '').trim().toLowerCase() : 'monthly';
+      const cycle = ['monthly', 'quarterly', 'yearly', 'once'].includes(cycleRaw) ? cycleRaw : 'monthly';
+      
+      const statusRaw = colIdx.status !== undefined ? (cols[colIdx.status] || '').trim().toLowerCase() : 'active';
+      const status = ['inactive', '停用', '禁用', 'disabled', '没用了'].includes(statusRaw) ? 'inactive' : 'active';
+      
+      servers.push({
+        ip,
+        provider: colIdx.provider !== undefined ? (cols[colIdx.provider] || '').trim() : '',
+        label: colIdx.label !== undefined ? (cols[colIdx.label] || '').trim() : '',
+        price: parseFloat(colIdx.price !== undefined ? cols[colIdx.price] : '') || 0,
+        cycle,
+        dueDate: colIdx.dueDate !== undefined ? (cols[colIdx.dueDate] || '').trim() : '',
+        status,
+        username: colIdx.username !== undefined ? (cols[colIdx.username] || '').trim() : '',
+        port: colIdx.port !== undefined ? (cols[colIdx.port] || '').trim() : '',
+        password: colIdx.password !== undefined ? (cols[colIdx.password] || '') : '',
+        createdAt: Date.now()
+      });
+    }
+    
+    if (servers.length === 0) throw new Error('没有解析到任何服务器');
+    
+    // 询问是否清空现有数据(避免重复)
+    const currentCount = (await Data.getAll()).length;
+    let mode = 'append';
+    if (currentCount > 0) {
+      const choice = confirm(
+        `CSV 解析到 ${servers.length} 个服务器\n` +
+        `当前数据库有 ${currentCount} 条记录\n\n` +
+        `点【确定】= 清空旧的,只用 CSV 数据\n` +
+        `点【取消】= 追加(可能会重复)`
+      );
+      mode = choice ? 'replace' : 'append';
+    }
+    
+    if (mode === 'replace') {
+      await Data.clearAll();
+    }
+    
+    let added = 0;
+    for (const s of servers) {
+      try {
+        await Data.add(s);
+        added++;
+      } catch (err) {
+        console.warn('Failed to add:', s.ip, err);
+      }
+    }
+    
+    showToast(`✓ 已导入 ${added}/${servers.length} 个服务器`);
+    await renderAll();
+  } catch (err) {
+    alert('导入失败: ' + err.message);
+    showToast('✗ 导入失败');
   }
   e.target.value = '';
 });
