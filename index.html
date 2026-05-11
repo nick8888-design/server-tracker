@@ -438,6 +438,55 @@ body {
   font-style: italic;
 }
 
+/* 卡片登录信息 */
+.server-login {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.06), rgba(59, 130, 246, 0.03));
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  border-radius: 6px;
+  font-size: 11px;
+}
+.server-login .login-label {
+  font-size: 12px;
+}
+.server-login .login-user {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--purple);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.server-login .login-user:hover {
+  background: rgba(139, 92, 246, 0.15);
+}
+.server-login .login-port {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-3);
+  font-size: 10px;
+}
+.server-login .login-pwd-btn {
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  color: var(--purple);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: inherit;
+  cursor: pointer;
+  margin-left: auto;
+}
+.server-login .login-pwd-btn:hover {
+  background: var(--purple);
+  color: white;
+}
+
 .add-ip-to-group {
   background: var(--bg);
   border: 1px dashed var(--line);
@@ -762,7 +811,35 @@ textarea {
       <label class="field-label">下次到期日 ⚠️</label>
       <input type="date" id="inDueDate">
       <div style="font-size: 11px; color: var(--text-3); margin-top: 4px;">
-        每次续费后,自动 +1 周期
+        💡 只需要设一次,以后点 [✓ 已续费] 自动 +1 周期
+      </div>
+    </div>
+
+    <!-- 登录信息 -->
+    <div class="form-group" style="padding: 12px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.06), rgba(59, 130, 246, 0.04)); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 10px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+        <span style="font-size: 16px;">🔐</span>
+        <span style="font-size: 13px; font-weight: 600; color: var(--purple);">登录信息 (可选)</span>
+      </div>
+      
+      <div class="form-row" style="margin-bottom: 10px;">
+        <div>
+          <label class="field-label">账号</label>
+          <input type="text" id="inUsername" placeholder="root / admin" autocomplete="off" spellcheck="false">
+        </div>
+        <div>
+          <label class="field-label">端口</label>
+          <input type="text" id="inPort" placeholder="22" autocomplete="off" inputmode="numeric">
+        </div>
+      </div>
+      
+      <label class="field-label">密码</label>
+      <div style="position: relative;">
+        <input type="password" id="inPassword" placeholder="服务器密码" autocomplete="new-password" spellcheck="false" style="padding-right: 40px;">
+        <button type="button" id="togglePasswordBtn" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 6px 8px; font-size: 16px; color: var(--text-3); border-radius: 4px;">👁️</button>
+      </div>
+      <div style="font-size: 10px; color: var(--text-3); margin-top: 6px;">
+        🔒 密码只存在你设备本地(IndexedDB),不会上传任何地方
       </div>
     </div>
 
@@ -806,6 +883,8 @@ textarea {
     
     <div class="form-group">
       <label class="field-label">数据</label>
+      <button class="btn btn-ghost" id="exportTxtBtn" style="margin-bottom: 6px;">📄 导出 TXT (像原始格式)</button>
+      <button class="btn btn-ghost" id="exportTxtFullBtn" style="margin-bottom: 6px;">📋 导出 TXT (含账号密码)</button>
       <button class="btn btn-ghost" id="exportJsonBtn" style="margin-bottom: 6px;">📦 导出 JSON 备份</button>
       <button class="btn btn-ghost" id="importJsonBtn" style="margin-bottom: 6px;">📥 导入 JSON 备份</button>
       <button class="btn btn-danger" id="clearAllBtn">⚠ 清空所有数据</button>
@@ -1197,7 +1276,16 @@ function renderServerList(all) {
               <div class="server-meta">
                 ${s.price > 0 ? `<span class="price">RM ${s.price}/${s.cycle === 'monthly' ? 'mo' : s.cycle === 'quarterly' ? 'qtr' : s.cycle === 'yearly' ? 'yr' : 'once'}</span>` : `<button class="quick-action quick-set-price" data-id="${s.id}">+ 设月费</button>`}
                 ${dueText ? `<span class="due-date ${dueClass}">${dueText}</span>` : `<button class="quick-action quick-set-date" data-id="${s.id}">+ 设到期日</button>`}
+                ${s.dueDate ? `<button class="quick-action renew-quick" data-id="${s.id}" style="border-color: var(--green); color: var(--green); border-style: solid; background: rgba(16, 185, 129, 0.06);">✓ 已续费</button>` : ''}
               </div>
+              ${(s.username || s.password) ? `
+                <div class="server-login">
+                  <span class="login-label">🔐</span>
+                  ${s.username ? `<span class="login-user" data-copy="${escapeHtml(s.username)}" data-label="账号">${escapeHtml(s.username)}</span>` : ''}
+                  ${s.port ? `<span class="login-port">:${escapeHtml(s.port)}</span>` : ''}
+                  ${s.password ? `<button class="login-pwd-btn" data-id="${s.id}">显示密码</button>` : ''}
+                </div>
+              ` : ''}
               ${s.label ? `<div class="server-note">${escapeHtml(s.label)}</div>` : ''}
             </div>
           `;
@@ -1259,10 +1347,72 @@ function renderServerList(all) {
       openServerEdit(null);
     });
   });
+  
+  // 卡片快捷续费
+  container.querySelectorAll('.renew-quick').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = parseInt(btn.dataset.id);
+      const all = await Data.getAll();
+      const s = all.find(x => x.id === id);
+      if (!s || !s.dueDate) return;
+      const newDate = addPeriod(s.dueDate, s.cycle || 'monthly');
+      s.dueDate = newDate;
+      await Data.update(s);
+      const cycleLabel = s.cycle === 'monthly' ? '+1月' : s.cycle === 'quarterly' ? '+3月' : s.cycle === 'yearly' ? '+1年' : '';
+      showToast(`✓ ${s.ip} 已续费 ${cycleLabel} → ${newDate}`);
+      await renderAll();
+    });
+  });
+  
+  // 显示密码(临时弹窗)
+  container.querySelectorAll('.login-pwd-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = parseInt(btn.dataset.id);
+      const all = await Data.getAll();
+      const s = all.find(x => x.id === id);
+      if (!s || !s.password) return;
+      // 自动复制密码到剪贴板
+      try {
+        await navigator.clipboard.writeText(s.password);
+      } catch (err) {}
+      // 显示密码 4 秒后自动隐藏
+      btn.dataset.originalText = btn.textContent;
+      btn.textContent = s.password;
+      btn.style.background = 'var(--warn)';
+      btn.style.color = 'white';
+      btn.style.borderColor = 'var(--warn)';
+      btn.style.fontFamily = "'JetBrains Mono', monospace";
+      showToast('✓ 密码已复制到剪贴板');
+      setTimeout(() => {
+        btn.textContent = '显示密码';
+        btn.style.background = '';
+        btn.style.color = '';
+        btn.style.borderColor = '';
+        btn.style.fontFamily = '';
+      }, 4000);
+    });
+  });
+  
+  // 点账号复制
+  container.querySelectorAll('.login-user').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const val = el.dataset.copy;
+      navigator.clipboard.writeText(val).then(() => {
+        showToast(`✓ 已复制账号: ${val}`);
+      });
+    });
+  });
 }
 
 async function openServerEdit(id = null) {
   editingServerId = id;
+  
+  // 重置密码可见性 - 每次打开都默认隐藏
+  document.getElementById('inPassword').type = 'password';
+  document.getElementById('togglePasswordBtn').textContent = '👁️';
   
   if (id) {
     const all = await Data.getAll();
@@ -1275,6 +1425,9 @@ async function openServerEdit(id = null) {
     document.getElementById('inPrice').value = s.price || '';
     document.getElementById('inCycle').value = s.cycle || 'monthly';
     document.getElementById('inDueDate').value = s.dueDate || '';
+    document.getElementById('inUsername').value = s.username || '';
+    document.getElementById('inPort').value = s.port || '';
+    document.getElementById('inPassword').value = s.password || '';
     pendingServerStatus = s.status || 'active';
     document.getElementById('deleteServerBtn').classList.remove('hidden');
     document.getElementById('renewBtn').style.display = s.dueDate ? 'block' : 'none';
@@ -1287,6 +1440,9 @@ async function openServerEdit(id = null) {
     document.getElementById('inPrice').value = '';
     document.getElementById('inCycle').value = 'monthly';
     document.getElementById('inDueDate').value = '';
+    document.getElementById('inUsername').value = '';
+    document.getElementById('inPort').value = '';
+    document.getElementById('inPassword').value = '';
     pendingServerStatus = 'active';
     document.getElementById('deleteServerBtn').classList.add('hidden');
     document.getElementById('renewBtn').style.display = 'none';
@@ -1302,6 +1458,19 @@ async function openServerEdit(id = null) {
     setTimeout(() => document.getElementById('inIp').focus(), 200);
   }
 }
+
+// 密码👁️切换
+document.getElementById('togglePasswordBtn').addEventListener('click', () => {
+  const inp = document.getElementById('inPassword');
+  const btn = document.getElementById('togglePasswordBtn');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    inp.type = 'password';
+    btn.textContent = '👁️';
+  }
+});
 
 document.getElementById('modalClose').addEventListener('click', () => {
   document.getElementById('serverModal').classList.remove('show');
@@ -1327,6 +1496,9 @@ document.getElementById('saveServerBtn').addEventListener('click', async () => {
     price: parseFloat(document.getElementById('inPrice').value) || 0,
     cycle: document.getElementById('inCycle').value,
     dueDate: document.getElementById('inDueDate').value,
+    username: document.getElementById('inUsername').value.trim(),
+    port: document.getElementById('inPort').value.trim(),
+    password: document.getElementById('inPassword').value,  // 密码保留空格(可能有意义)
     status: pendingServerStatus
   };
   
@@ -1488,10 +1660,8 @@ document.getElementById('enableNotifBtn').addEventListener('click', async () => 
 });
 
 document.getElementById('exportBtn').addEventListener('click', () => {
+  // 打开设置页让用户选(TXT/JSON)
   document.getElementById('settingsBtn').click();
-  setTimeout(() => {
-    document.getElementById('exportJsonBtn').click();
-  }, 100);
 });
 
 document.getElementById('exportJsonBtn').addEventListener('click', async () => {
@@ -1504,6 +1674,136 @@ document.getElementById('exportJsonBtn').addEventListener('click', async () => {
   a.click();
   URL.revokeObjectURL(url);
   showToast('✓ 已下载备份');
+});
+
+// ============= 导出 TXT (原始格式 - 无密码) =============
+function downloadTxt(text, filename) {
+  // BOM + UTF-8 让 Windows 记事本正确显示中文
+  const blob = new Blob(['\uFEFF' + text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('exportTxtBtn').addEventListener('click', async () => {
+  const all = await Data.getAll();
+  if (all.length === 0) { showToast('没有数据可导出'); return; }
+  
+  // 按供应商分组(保留原始添加顺序)
+  const grouped = {};
+  const providerOrder = [];
+  all.forEach(s => {
+    const p = s.provider || '(无供应商)';
+    if (!grouped[p]) {
+      grouped[p] = [];
+      providerOrder.push(p);
+    }
+    grouped[p].push(s);
+  });
+  
+  let txt = '';
+  providerOrder.forEach(provider => {
+    txt += provider + '\n';
+    grouped[provider].forEach(s => {
+      let line = '- ' + s.ip;
+      const parts = [];
+      if (s.label) parts.push(s.label);
+      if (s.status === 'inactive') parts.push('没用了');
+      if (parts.length > 0) line += '（' + parts.join('·') + '）';
+      if (s.dueDate) {
+        line += ` // 到期 ${s.dueDate}`;
+      }
+      if (s.price > 0) {
+        const cycleLabel = s.cycle === 'monthly' ? '/月' : s.cycle === 'quarterly' ? '/季' : s.cycle === 'yearly' ? '/年' : '';
+        line += ` · RM${s.price}${cycleLabel}`;
+      }
+      txt += line + '\n';
+    });
+    txt += '\n';
+  });
+  
+  txt += `\n----- Total: ${all.length} servers · Exported: ${todayStr()} -----\n`;
+  
+  downloadTxt(txt, `servers_${todayStr()}.txt`);
+  showToast('✓ 已导出 TXT (无密码)');
+});
+
+// ============= 导出 TXT 完整版 (含账号密码 - ⚠ 敏感) =============
+document.getElementById('exportTxtFullBtn').addEventListener('click', async () => {
+  const all = await Data.getAll();
+  if (all.length === 0) { showToast('没有数据可导出'); return; }
+  
+  if (!confirm('⚠ 即将导出含密码的 TXT 文件!\n\n导出后请妥善保管(微信发给自己也算泄露)。\n\n继续吗?')) return;
+  
+  const grouped = {};
+  const providerOrder = [];
+  all.forEach(s => {
+    const p = s.provider || '(无供应商)';
+    if (!grouped[p]) {
+      grouped[p] = [];
+      providerOrder.push(p);
+    }
+    grouped[p].push(s);
+  });
+  
+  let txt = '============================================\n';
+  txt += `  服务器完整清单 (含登录信息)\n`;
+  txt += `  导出时间: ${new Date().toLocaleString('zh-CN')}\n`;
+  txt += `  共 ${all.length} 台服务器\n`;
+  txt += '  ⚠ 此文件包含密码,请妥善保管\n';
+  txt += '============================================\n\n';
+  
+  providerOrder.forEach(provider => {
+    txt += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    txt += `  📦 ${provider} (${grouped[provider].length} 台)\n`;
+    txt += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+    
+    grouped[provider].forEach((s, idx) => {
+      txt += `[${idx + 1}] IP: ${s.ip}`;
+      if (s.status === 'inactive') txt += '   [⚠ 已停用]';
+      txt += '\n';
+      
+      if (s.label) txt += `    备注: ${s.label}\n`;
+      
+      if (s.username) {
+        let loginLine = `    账号: ${s.username}`;
+        if (s.port) loginLine += `  端口: ${s.port}`;
+        txt += loginLine + '\n';
+      }
+      if (s.password) txt += `    密码: ${s.password}\n`;
+      
+      if (s.price > 0) {
+        const cycleLabel = s.cycle === 'monthly' ? '/月' : s.cycle === 'quarterly' ? '/季' : s.cycle === 'yearly' ? '/年' : '/一次性';
+        txt += `    费用: RM ${s.price}${cycleLabel}\n`;
+      }
+      if (s.dueDate) {
+        const days = daysUntil(s.dueDate);
+        let dueLine = `    到期: ${s.dueDate}`;
+        if (days < 0) dueLine += `  [⚠ 已逾期 ${Math.abs(days)} 天]`;
+        else if (days === 0) dueLine += `  [⚠ 今天到期]`;
+        else if (days <= 7) dueLine += `  [⚠ ${days} 天后]`;
+        else dueLine += `  (${days} 天后)`;
+        txt += dueLine + '\n';
+      }
+      
+      txt += '\n';
+    });
+  });
+  
+  // 末尾统计
+  const active = all.filter(s => s.status !== 'inactive');
+  const totalMonthly = active.reduce((sum, s) => sum + monthlyPrice(s.price || 0, s.cycle || 'monthly'), 0);
+  txt += '============================================\n';
+  txt += `  统计: ${active.length} 启用 · ${all.length - active.length} 停用\n`;
+  txt += `  月度支出总计: RM ${totalMonthly.toFixed(2)}\n`;
+  txt += `  年度支出总计: RM ${(totalMonthly * 12).toFixed(2)}\n`;
+  txt += '============================================\n';
+  
+  downloadTxt(txt, `servers_full_${todayStr()}.txt`);
+  showToast('✓ 已导出完整 TXT (含密码)');
 });
 
 document.getElementById('importJsonBtn').addEventListener('click', () => {
