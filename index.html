@@ -793,18 +793,33 @@ textarea {
 
     <div class="form-row">
       <div>
-        <label class="field-label">月费 RM</label>
-        <input type="number" id="inPrice" step="0.01" min="0" placeholder="50.00" inputmode="decimal">
-      </div>
-      <div>
-        <label class="field-label">付款周期</label>
-        <select id="inCycle">
-          <option value="monthly">每月</option>
-          <option value="quarterly">每季</option>
-          <option value="yearly">每年</option>
-          <option value="once">一次性</option>
+        <label class="field-label">货币</label>
+        <select id="inCurrency">
+          <option value="MYR">🇲🇾 RM</option>
+          <option value="USD">🇺🇸 USD $</option>
+          <option value="EUR">🇩🇪 EUR €</option>
+          <option value="CNY">🇨🇳 ¥ RMB</option>
+          <option value="SGD">🇸🇬 SGD S$</option>
+          <option value="HKD">🇭🇰 HKD HK$</option>
+          <option value="TWD">🇹🇼 TWD NT$</option>
+          <option value="GBP">🇬🇧 GBP £</option>
+          <option value="AUD">🇦🇺 AUD A$</option>
         </select>
       </div>
+      <div>
+        <label class="field-label">价格</label>
+        <input type="number" id="inPrice" step="0.01" min="0" placeholder="50.00" inputmode="decimal">
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label class="field-label">付款周期</label>
+      <select id="inCycle">
+        <option value="monthly">每月</option>
+        <option value="quarterly">每季</option>
+        <option value="yearly">每年</option>
+        <option value="once">一次性</option>
+      </select>
     </div>
 
     <div class="form-group">
@@ -873,6 +888,23 @@ textarea {
       <div style="font-size: 11px; color: var(--text-3); margin-top: 4px;">
         到期前 X 天开始提醒
       </div>
+    </div>
+    
+    <!-- 💱 汇率设置 -->
+    <div class="form-group" style="padding: 12px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.06), rgba(59, 130, 246, 0.04)); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 10px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 16px;">💱</span>
+          <span style="font-size: 13px; font-weight: 600; color: var(--green);">汇率换算 (1 单位 = X MYR)</span>
+        </div>
+        <button id="resetRatesBtn" style="background: var(--bg-3); border: 1px solid var(--line); color: var(--text-2); padding: 4px 10px; border-radius: 4px; font-size: 11px; font-family: inherit; cursor: pointer;">还原默认</button>
+      </div>
+      <div style="font-size: 11px; color: var(--text-3); margin-bottom: 10px; line-height: 1.5;">
+        所有外币会换算成 MYR 显示在月度支出。<br>
+        汇率会变动,可以根据实际行情更新。
+      </div>
+      <div id="ratesList" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;"></div>
+      <button class="btn" id="saveRatesBtn" style="margin-top: 10px;">💾 保存汇率</button>
     </div>
     
     <div class="form-group">
@@ -1039,6 +1071,60 @@ function addPeriod(dateStr, cycle) {
   else if (cycle === 'yearly') d.setFullYear(d.getFullYear() + 1);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
+// 货币换算汇率(对 MYR,默认值,用户可在设置改)
+// 这是基础默认值,用户在设置里可以更新最新汇率
+const DEFAULT_RATES = {
+  MYR: 1,
+  USD: 4.7,
+  EUR: 5.1,
+  CNY: 0.65,
+  SGD: 3.5,
+  HKD: 0.60,
+  TWD: 0.145,
+  GBP: 5.95,
+  AUD: 3.10
+};
+
+const CURRENCY_SYMBOLS = {
+  MYR: 'RM',
+  USD: '$',
+  EUR: '€',
+  CNY: '¥',
+  SGD: 'S$',
+  HKD: 'HK$',
+  TWD: 'NT$',
+  GBP: '£',
+  AUD: 'A$'
+};
+
+let currentRates = { ...DEFAULT_RATES };
+
+// 异步加载用户保存的汇率
+async function loadCurrentRates() {
+  const saved = await Data.getSetting('currencyRates');
+  if (saved) {
+    currentRates = { ...DEFAULT_RATES, ...saved };
+  }
+}
+
+// 把任意货币的价格换算成 MYR
+function toMYR(price, currency) {
+  if (!price) return 0;
+  const cur = currency || 'MYR';
+  const rate = currentRates[cur] || 1;
+  return price * rate;
+}
+
+// 显示原货币的价格(短格式: $50 / RM44 / €40 等)
+function formatPriceShort(price, currency, cycle) {
+  if (!price) return '';
+  const sym = CURRENCY_SYMBOLS[currency || 'MYR'] || 'RM';
+  const cycleLabel = cycle === 'monthly' ? '/mo' : cycle === 'quarterly' ? '/qtr' : cycle === 'yearly' ? '/yr' : '/once';
+  // 整数显示整数
+  const priceStr = Number.isInteger(price) ? price : price.toFixed(2);
+  return `${sym} ${priceStr}${cycleLabel}`;
+}
+
 function monthlyPrice(price, cycle) {
   if (!price) return 0;
   if (cycle === 'monthly') return price;
@@ -1370,9 +1456,13 @@ async function renderAlertBanner(all) {
 
 function renderSummary(all) {
   const active = all.filter(s => s.status !== 'inactive');
-  const total = active.reduce((sum, s) => sum + monthlyPrice(s.price || 0, s.cycle || 'monthly'), 0);
+  // 把每个服务器的价格换算成 MYR 再加总
+  const total = active.reduce((sum, s) => {
+    const myrPrice = toMYR(s.price || 0, s.currency || 'MYR');
+    return sum + monthlyPrice(myrPrice, s.cycle || 'monthly');
+  }, 0);
   document.getElementById('monthlyTotal').textContent = `RM ${total.toFixed(0)}`;
-  document.getElementById('activeCount').textContent = `${active.length} active · ${all.length} total`;
+  document.getElementById('activeCount').textContent = `${active.length} active · ${all.length} total · 已换算 MYR`;
   
   const upcoming = active
     .filter(s => s.dueDate)
@@ -1482,7 +1572,7 @@ function renderServerList(all) {
                 <button class="icon-btn edit-btn" data-id="${s.id}">✎ edit</button>
               </div>
               <div class="server-meta">
-                ${s.price > 0 ? `<span class="price">RM ${s.price}/${s.cycle === 'monthly' ? 'mo' : s.cycle === 'quarterly' ? 'qtr' : s.cycle === 'yearly' ? 'yr' : 'once'}</span>` : `<button class="quick-action quick-set-price" data-id="${s.id}">+ 设月费</button>`}
+                ${s.price > 0 ? `<span class="price">${formatPriceShort(s.price, s.currency, s.cycle)}${(s.currency && s.currency !== 'MYR') ? ` <span style="color: var(--text-3); font-weight: 400;">≈ RM ${toMYR(s.price, s.currency).toFixed(0)}</span>` : ''}</span>` : `<button class="quick-action quick-set-price" data-id="${s.id}">+ 设月费</button>`}
                 ${dueText ? `<span class="due-date ${dueClass}">${dueText}</span>` : `<button class="quick-action quick-set-date" data-id="${s.id}">+ 设到期日</button>`}
                 ${s.dueDate ? `<button class="quick-action renew-quick" data-id="${s.id}" style="border-color: var(--green); color: var(--green); border-style: solid; background: rgba(16, 185, 129, 0.06);">✓ 已续费</button>` : ''}
               </div>
@@ -1631,6 +1721,7 @@ async function openServerEdit(id = null) {
     document.getElementById('inProvider').value = s.provider || '';
     document.getElementById('inLabel').value = s.label || '';
     document.getElementById('inPrice').value = s.price || '';
+    document.getElementById('inCurrency').value = s.currency || 'MYR';
     document.getElementById('inCycle').value = s.cycle || 'monthly';
     document.getElementById('inDueDate').value = s.dueDate || '';
     document.getElementById('inUsername').value = s.username || '';
@@ -1646,6 +1737,7 @@ async function openServerEdit(id = null) {
     document.getElementById('inProvider').value = prefilledProvider || '';
     document.getElementById('inLabel').value = '';
     document.getElementById('inPrice').value = '';
+    document.getElementById('inCurrency').value = 'MYR';
     document.getElementById('inCycle').value = 'monthly';
     document.getElementById('inDueDate').value = '';
     document.getElementById('inUsername').value = '';
@@ -1702,6 +1794,7 @@ document.getElementById('saveServerBtn').addEventListener('click', async () => {
     ip, provider,
     label: document.getElementById('inLabel').value.trim(),
     price: parseFloat(document.getElementById('inPrice').value) || 0,
+    currency: document.getElementById('inCurrency').value || 'MYR',
     cycle: document.getElementById('inCycle').value,
     dueDate: document.getElementById('inDueDate').value,
     username: document.getElementById('inUsername').value.trim(),
@@ -1851,6 +1944,9 @@ document.getElementById('settingsBtn').addEventListener('click', async () => {
   const days = (await Data.getSetting('reminderDays')) || 7;
   document.getElementById('reminderDays').value = days;
   
+  // 渲染汇率表
+  renderRatesList();
+  
   if ('Notification' in window) {
     const status = Notification.permission;
     document.getElementById('notifStatus').textContent = `状态: ${status === 'granted' ? '✓ 已开启' : status === 'denied' ? '✗ 被禁止 (浏览器设置里允许)' : '未授权'}`;
@@ -1859,6 +1955,48 @@ document.getElementById('settingsBtn').addEventListener('click', async () => {
   }
   
   document.getElementById('settingsModal').classList.add('show');
+});
+
+// 渲染汇率输入框
+function renderRatesList() {
+  const container = document.getElementById('ratesList');
+  if (!container) return;
+  const currencies = ['USD', 'EUR', 'CNY', 'SGD', 'HKD', 'TWD', 'GBP', 'AUD'];
+  container.innerHTML = currencies.map(cur => {
+    const sym = CURRENCY_SYMBOLS[cur];
+    const rate = currentRates[cur] || DEFAULT_RATES[cur];
+    return `
+      <div>
+        <label class="field-label" style="font-size: 10px;">${sym} ${cur} → MYR</label>
+        <input type="number" step="0.01" min="0" data-rate="${cur}" value="${rate}" style="padding: 8px 10px; font-size: 13px;">
+      </div>
+    `;
+  }).join('');
+}
+
+// 保存汇率
+document.addEventListener('click', async (e) => {
+  if (e.target.id === 'saveRatesBtn') {
+    const rates = { MYR: 1 };
+    document.querySelectorAll('#ratesList input[data-rate]').forEach(inp => {
+      const cur = inp.dataset.rate;
+      const v = parseFloat(inp.value) || DEFAULT_RATES[cur];
+      rates[cur] = v;
+    });
+    currentRates = { ...DEFAULT_RATES, ...rates };
+    await Data.setSetting('currencyRates', currentRates);
+    showToast('✓ 汇率已保存');
+    await renderAll();
+  }
+  
+  if (e.target.id === 'resetRatesBtn') {
+    if (!confirm('还原成默认汇率?')) return;
+    currentRates = { ...DEFAULT_RATES };
+    await Data.setSetting('currencyRates', null);
+    renderRatesList();
+    showToast('✓ 已还原默认');
+    await renderAll();
+  }
 });
 
 document.getElementById('settingsClose').addEventListener('click', () => {
@@ -2283,6 +2421,7 @@ async function checkAndNotify() {
 
 (async () => {
   await openDB();
+  await loadCurrentRates();  // 先加载汇率
   await renderAll();
   
   setTimeout(() => checkAndNotify(), 1500);
