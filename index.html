@@ -949,7 +949,7 @@ textarea {
         <span style="font-size: 13px; font-weight: 600; color: var(--accent-dark);">云同步</span>
       </div>
       <div id="syncDetailInfo" style="font-size: 11px; color: var(--text-2); line-height: 1.5; margin-bottom: 10px;">
-        <div>服务器: <span style="font-family: 'JetBrains Mono', monospace; color: var(--text);">38.180.249.249:3001</span></div>
+        <div>服务器: <span style="font-family: 'JetBrains Mono', monospace; color: var(--text);">nick-vps.duckdns.org (HTTPS)</span></div>
         <div>状态: <span id="syncDetailStatus" style="font-family: 'JetBrains Mono', monospace;">检查中...</span></div>
         <div>上次同步: <span id="syncDetailLast" style="font-family: 'JetBrains Mono', monospace;">—</span></div>
       </div>
@@ -1008,7 +1008,7 @@ textarea {
 
 <script>
 // ========== VPS 同步配置 ==========
-const API_URL = 'http://38.180.249.249:3001';  // 你的 VPS API 地址
+const API_URL = 'https://nick-vps.duckdns.org';  // 你的 VPS API 地址 (HTTPS)
 const APP_NAME = 'server-tracker';  // 这个 App 的标识(以后多 App 共用 API 时区分)
 
 // Token 存在 localStorage(简单),数据存在 IndexedDB(主要)
