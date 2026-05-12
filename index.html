@@ -709,10 +709,39 @@ textarea {
 </head>
 <body>
 
+<!-- 登录页 -->
+<div id="loginScreen" style="display: none; position: fixed; inset: 0; background: linear-gradient(135deg, #f0f7ff 0%, #e0eaf5 100%); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+  <div style="background: white; padding: 30px 24px; border-radius: 16px; box-shadow: 0 10px 40px rgba(15, 23, 42, 0.15); max-width: 380px; width: 100%;">
+    <div style="text-align: center; margin-bottom: 20px;">
+      <div style="font-size: 48px; margin-bottom: 8px;">🔐</div>
+      <h2 style="font-size: 20px; font-weight: 700; color: #1e40af; margin-bottom: 4px;">服务器管理</h2>
+      <div style="font-size: 12px; color: #94a3b8;">输入密码同步你的数据</div>
+    </div>
+    
+    <div style="margin-bottom: 14px;">
+      <label style="display: block; font-size: 11px; color: #475569; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px; font-weight: 600;">密码</label>
+      <div style="position: relative;">
+        <input type="password" id="loginPasswordInput" placeholder="输入密码" autocomplete="current-password" style="width: 100%; background: white; border: 1px solid #cbd5e1; color: #0f172a; padding: 12px 40px 12px 14px; font-size: 14px; border-radius: 8px; outline: none;">
+        <button type="button" id="loginShowPwdBtn" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 6px 8px; font-size: 16px; color: #94a3b8; border-radius: 4px;">👁️</button>
+      </div>
+      <div id="loginError" style="color: #ef4444; font-size: 12px; margin-top: 8px; display: none;"></div>
+    </div>
+    
+    <button id="loginSubmitBtn" style="background: linear-gradient(135deg, #3b82f6, #0ea5e9); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);">登录</button>
+    
+    <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.5;">
+      数据存储在: <span id="loginServerInfo" style="font-family: 'JetBrains Mono', monospace; color: #475569;">配置中...</span>
+    </div>
+  </div>
+</div>
+
 <div id="app">
   <header class="header">
     <h1><span class="icon">🖥️</span><span>服务器管理</span></h1>
-    <div class="sub">// VPS subscriptions &amp; renewal reminder</div>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div class="sub">// VPS subscriptions &amp; renewal reminder</div>
+      <div id="syncIndicator" style="display: flex; align-items: center; font-family: 'JetBrains Mono', monospace;"></div>
+    </div>
   </header>
 
   <div id="alertBanner" class="alert-banner empty">
@@ -913,6 +942,21 @@ textarea {
       <div id="notifStatus" style="font-size: 11px; color: var(--text-3); margin-top: 6px;"></div>
     </div>
     
+    <!-- 云同步 -->
+    <div class="form-group" style="padding: 12px; background: linear-gradient(135deg, rgba(59, 130, 246, 0.06), rgba(14, 165, 233, 0.04)); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 10px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+        <span style="font-size: 16px;">☁️</span>
+        <span style="font-size: 13px; font-weight: 600; color: var(--accent-dark);">云同步</span>
+      </div>
+      <div id="syncDetailInfo" style="font-size: 11px; color: var(--text-2); line-height: 1.5; margin-bottom: 10px;">
+        <div>服务器: <span style="font-family: 'JetBrains Mono', monospace; color: var(--text);">38.180.249.249:3001</span></div>
+        <div>状态: <span id="syncDetailStatus" style="font-family: 'JetBrains Mono', monospace;">检查中...</span></div>
+        <div>上次同步: <span id="syncDetailLast" style="font-family: 'JetBrains Mono', monospace;">—</span></div>
+      </div>
+      <button class="btn btn-ghost" id="syncNowBtn" style="margin-bottom: 6px;">🔄 立即同步</button>
+      <button class="btn btn-ghost" id="logoutBtn" style="color: var(--warn);">🚪 退出登录</button>
+    </div>
+    
     <div class="form-group">
       <label class="field-label">数据</label>
       <button class="btn btn-ghost" id="exportTxtBtn" style="margin-bottom: 6px;">📄 导出 TXT (像原始格式)</button>
@@ -963,6 +1007,217 @@ textarea {
 <div class="toast" id="toast"></div>
 
 <script>
+// ========== VPS 同步配置 ==========
+const API_URL = 'http://38.180.249.249:3001';  // 你的 VPS API 地址
+const APP_NAME = 'server-tracker';  // 这个 App 的标识(以后多 App 共用 API 时区分)
+
+// Token 存在 localStorage(简单),数据存在 IndexedDB(主要)
+function getToken() { return localStorage.getItem('vps_token') || ''; }
+function setToken(t) { localStorage.setItem('vps_token', t); }
+function clearToken() { localStorage.removeItem('vps_token'); }
+
+// 同步状态(给 UI 显示用)
+let syncStatus = { state: 'idle', lastSync: 0, error: '' };
+function setSyncStatus(state, error = '') {
+  syncStatus.state = state;
+  if (state === 'synced') syncStatus.lastSync = Date.now();
+  syncStatus.error = error;
+  updateSyncIndicator();
+}
+function updateSyncIndicator() {
+  const el = document.getElementById('syncIndicator');
+  if (!el) return;
+  const map = {
+    idle: { text: '已同步', color: '#94a3b8', dot: '#10b981' },
+    syncing: { text: '同步中...', color: '#3b82f6', dot: '#3b82f6' },
+    synced: { text: '✓ 已同步', color: '#10b981', dot: '#10b981' },
+    error: { text: '⚠ 同步失败', color: '#ef4444', dot: '#ef4444' },
+    offline: { text: '⚠ 离线', color: '#f59e0b', dot: '#f59e0b' }
+  };
+  const s = map[syncStatus.state] || map.idle;
+  el.innerHTML = `<span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${s.dot}; margin-right: 4px;"></span><span style="color: ${s.color}; font-size: 10px;">${s.text}</span>`;
+}
+
+// 从 VPS 拉数据
+async function pullFromVPS() {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    setSyncStatus('syncing');
+    const res = await fetch(`${API_URL}/api/data/${APP_NAME}`, {
+      headers: { 'x-auth-token': token }
+    });
+    if (res.status === 401) {
+      clearToken();
+      showLoginScreen();
+      throw new Error('登录过期,请重新登录');
+    }
+    if (!res.ok) throw new Error('服务器错误: ' + res.status);
+    const result = await res.json();
+    setSyncStatus('synced');
+    return result.data;  // null 表示云端没数据
+  } catch (e) {
+    if (e.message.includes('Failed to fetch')) {
+      setSyncStatus('offline', '无法连接到 VPS');
+    } else {
+      setSyncStatus('error', e.message);
+    }
+    console.error('Pull error:', e);
+    return null;
+  }
+}
+
+// 推到 VPS (传整个数据数组)
+async function pushToVPS(allServers) {
+  const token = getToken();
+  if (!token) return false;
+  try {
+    setSyncStatus('syncing');
+    const res = await fetch(`${API_URL}/api/data/${APP_NAME}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+      body: JSON.stringify(allServers)
+    });
+    if (res.status === 401) {
+      clearToken();
+      showLoginScreen();
+      throw new Error('登录过期');
+    }
+    if (!res.ok) throw new Error('服务器错误: ' + res.status);
+    setSyncStatus('synced');
+    return true;
+  } catch (e) {
+    if (e.message.includes('Failed to fetch')) {
+      setSyncStatus('offline', '无法连接到 VPS');
+    } else {
+      setSyncStatus('error', e.message);
+    }
+    console.error('Push error:', e);
+    return false;
+  }
+}
+
+// 推迟推送 - 用户连续添加多个时只推一次
+let pushTimer = null;
+function schedulePush() {
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(async () => {
+    const all = await Data.getAll();
+    await pushToVPS(all);
+  }, 1500);  // 1.5 秒后才推
+}
+
+// ========== 登录系统 ==========
+function showLoginScreen() {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginServerInfo').textContent = API_URL.replace(/^https?:\/\//, '');
+  setTimeout(() => document.getElementById('loginPasswordInput').focus(), 100);
+}
+
+function hideLoginScreen() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = '';
+}
+
+async function tryLogin(password) {
+  try {
+    const res = await fetch(`${API_URL}/api/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    if (res.status === 401) return { ok: false, error: '密码错误' };
+    if (!res.ok) return { ok: false, error: '服务器错误: ' + res.status };
+    const result = await res.json();
+    if (!result.token) return { ok: false, error: '没收到 token' };
+    setToken(result.token);
+    return { ok: true };
+  } catch (e) {
+    if (e.message.includes('Failed to fetch')) {
+      return { ok: false, error: '无法连接到 VPS (检查网络/VPS 是否在线)' };
+    }
+    return { ok: false, error: e.message };
+  }
+}
+
+async function verifyToken() {
+  const token = getToken();
+  if (!token) return false;
+  try {
+    const res = await fetch(`${API_URL}/api/verify`, {
+      headers: { 'x-auth-token': token }
+    });
+    return res.ok;
+  } catch (e) {
+    return false;  // 网络出错 - 假设还有效(让用户进 App 用离线数据)
+  }
+}
+
+// 登录按钮事件
+document.addEventListener('DOMContentLoaded', () => {
+  const submitBtn = document.getElementById('loginSubmitBtn');
+  const pwdInput = document.getElementById('loginPasswordInput');
+  const showBtn = document.getElementById('loginShowPwdBtn');
+  const errEl = document.getElementById('loginError');
+  
+  if (showBtn) {
+    showBtn.addEventListener('click', () => {
+      if (pwdInput.type === 'password') {
+        pwdInput.type = 'text';
+        showBtn.textContent = '🙈';
+      } else {
+        pwdInput.type = 'password';
+        showBtn.textContent = '👁️';
+      }
+    });
+  }
+  
+  async function doLogin() {
+    const pwd = pwdInput.value;
+    if (!pwd) { errEl.textContent = '请输入密码'; errEl.style.display = 'block'; return; }
+    submitBtn.disabled = true;
+    submitBtn.textContent = '登录中...';
+    errEl.style.display = 'none';
+    
+    const result = await tryLogin(pwd);
+    if (!result.ok) {
+      errEl.textContent = '✗ ' + result.error;
+      errEl.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.textContent = '登录';
+      pwdInput.focus();
+      pwdInput.select();
+      return;
+    }
+    
+    // 登录成功 -> 拉云端数据 -> 进入 App
+    submitBtn.textContent = '正在拉取数据...';
+    hideLoginScreen();
+    const cloudData = await pullFromVPS();
+    if (cloudData && Array.isArray(cloudData) && cloudData.length > 0) {
+      // 云端有数据 -> 覆盖本地
+      await Data.clearAll();
+      for (const s of cloudData) {
+        const { id, ...rest } = s;
+        await Data.add(rest);
+      }
+      showToast(`✓ 已从云端拉取 ${cloudData.length} 条数据`);
+    }
+    await renderAll();
+    submitBtn.disabled = false;
+    submitBtn.textContent = '登录';
+    pwdInput.value = '';
+  }
+  
+  if (submitBtn) submitBtn.addEventListener('click', doLogin);
+  if (pwdInput) {
+    pwdInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doLogin();
+    });
+  }
+});
+
 const DB_NAME = 'serverTrackerDB';
 const DB_VERSION = 1;
 let db;
@@ -1660,6 +1915,7 @@ function renderServerList(all) {
       const cycleLabel = s.cycle === 'monthly' ? '+1月' : s.cycle === 'quarterly' ? '+3月' : s.cycle === 'yearly' ? '+1年' : '';
       showToast(`✓ ${s.ip} 已续费 ${cycleLabel} → ${newDate}`);
       await renderAll();
+      schedulePush();
     });
   });
   
@@ -1816,6 +2072,7 @@ document.getElementById('saveServerBtn').addEventListener('click', async () => {
   document.getElementById('serverModal').classList.remove('show');
   prefilledProvider = '';
   await renderAll();
+  schedulePush();
 });
 
 document.getElementById('deleteServerBtn').addEventListener('click', async () => {
@@ -1825,6 +2082,7 @@ document.getElementById('deleteServerBtn').addEventListener('click', async () =>
   document.getElementById('serverModal').classList.remove('show');
   showToast('已删除');
   await renderAll();
+  schedulePush();
 });
 
 document.getElementById('renewBtn').addEventListener('click', async () => {
@@ -1937,6 +2195,7 @@ document.getElementById('parseImportBtn').addEventListener('click', async () => 
     document.getElementById('importModal').classList.remove('show');
     showToast(`✓ 已导入 ${servers.length} 个服务器`);
     await renderAll();
+    schedulePush();
   });
 });
 
@@ -1947,6 +2206,23 @@ document.getElementById('settingsBtn').addEventListener('click', async () => {
   // 渲染汇率表
   renderRatesList();
   
+  // 更新同步状态信息
+  const statusEl = document.getElementById('syncDetailStatus');
+  const lastEl = document.getElementById('syncDetailLast');
+  if (statusEl) {
+    const map = { idle: '空闲', syncing: '同步中', synced: '✓ 已同步', error: '⚠ ' + syncStatus.error, offline: '⚠ 离线' };
+    statusEl.textContent = map[syncStatus.state] || '未知';
+    statusEl.style.color = syncStatus.state === 'synced' ? 'var(--green)' : syncStatus.state === 'error' || syncStatus.state === 'offline' ? 'var(--warn)' : 'var(--text)';
+  }
+  if (lastEl) {
+    if (syncStatus.lastSync) {
+      const d = new Date(syncStatus.lastSync);
+      lastEl.textContent = d.toLocaleString('zh-CN');
+    } else {
+      lastEl.textContent = '—';
+    }
+  }
+  
   if ('Notification' in window) {
     const status = Notification.permission;
     document.getElementById('notifStatus').textContent = `状态: ${status === 'granted' ? '✓ 已开启' : status === 'denied' ? '✗ 被禁止 (浏览器设置里允许)' : '未授权'}`;
@@ -1955,6 +2231,42 @@ document.getElementById('settingsBtn').addEventListener('click', async () => {
   }
   
   document.getElementById('settingsModal').classList.add('show');
+});
+
+// 立即同步按钮
+document.addEventListener('click', async (e) => {
+  if (e.target.id === 'syncNowBtn') {
+    e.target.disabled = true;
+    e.target.textContent = '⏳ 同步中...';
+    // 先推本地到云
+    const all = await Data.getAll();
+    await pushToVPS(all);
+    // 再拉云端最新(以防其他设备改了)
+    const cloudData = await pullFromVPS();
+    if (cloudData && Array.isArray(cloudData)) {
+      await Data.clearAll();
+      for (const s of cloudData) {
+        const { id, ...rest } = s;
+        await Data.add(rest);
+      }
+      await renderAll();
+    }
+    e.target.disabled = false;
+    e.target.textContent = '🔄 立即同步';
+    showToast('✓ 同步完成');
+    // 更新设置页面显示
+    document.getElementById('settingsBtn').click();
+    document.getElementById('settingsClose').click();
+    document.getElementById('settingsBtn').click();
+  }
+  
+  if (e.target.id === 'logoutBtn') {
+    if (!confirm('退出登录?\n\n本地数据保留,但需要重新登录才能同步。')) return;
+    clearToken();
+    document.getElementById('settingsModal').classList.remove('show');
+    showToast('已退出');
+    showLoginScreen();
+  }
 });
 
 // 渲染汇率输入框
@@ -2234,6 +2546,7 @@ document.getElementById('importJsonFile').addEventListener('change', async (e) =
     }
     showToast(`✓ 已导入 ${data.length} 条`);
     await renderAll();
+    schedulePush();
   } catch (err) {
     showToast('导入失败: ' + err.message);
   }
@@ -2373,6 +2686,7 @@ document.getElementById('importCsvFile').addEventListener('change', async (e) =>
     
     showToast(`✓ 已导入 ${added}/${servers.length} 个服务器`);
     await renderAll();
+    schedulePush();
   } catch (err) {
     alert('导入失败: ' + err.message);
     showToast('✗ 导入失败');
@@ -2387,6 +2701,7 @@ document.getElementById('clearAllBtn').addEventListener('click', async () => {
   document.getElementById('settingsModal').classList.remove('show');
   showToast('已清空');
   await renderAll();
+  schedulePush();
 });
 
 async function checkAndNotify() {
@@ -2421,8 +2736,26 @@ async function checkAndNotify() {
 
 (async () => {
   await openDB();
-  await loadCurrentRates();  // 先加载汇率
+  await loadCurrentRates();
   await renderAll();
+  
+  // 检查 token 是否有效
+  const tokenValid = await verifyToken();
+  if (!tokenValid) {
+    showLoginScreen();
+  } else {
+    // Token 有效 -> 拉云端最新数据
+    const cloudData = await pullFromVPS();
+    if (cloudData && Array.isArray(cloudData)) {
+      // 云端有数据 -> 用云端覆盖本地(保持多设备一致)
+      await Data.clearAll();
+      for (const s of cloudData) {
+        const { id, ...rest } = s;
+        await Data.add(rest);
+      }
+      await renderAll();
+    }
+  }
   
   setTimeout(() => checkAndNotify(), 1500);
   
