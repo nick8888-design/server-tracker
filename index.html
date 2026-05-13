@@ -819,6 +819,12 @@ textarea {
       <label class="field-label">备注 (可选)</label>
       <input type="text" id="inLabel" placeholder="主站 / 备份服务器 / 印尼区..." autocomplete="off">
     </div>
+    
+    <div class="form-group">
+      <label class="field-label">🔗 续费网址 (可选)</label>
+      <input type="url" id="inRenewUrl" placeholder="https://my.is-host.com/billing" autocomplete="off">
+      <div style="font-size: 10px; color: var(--text-3); margin-top: 4px;">填入供应商续费页面网址,卡片上会出现一键跳转按钮</div>
+    </div>
 
     <div class="form-row">
       <div>
@@ -1829,6 +1835,7 @@ function renderServerList(all) {
               <div class="server-meta">
                 ${s.price > 0 ? `<span class="price">${formatPriceShort(s.price, s.currency, s.cycle)}${(s.currency && s.currency !== 'MYR') ? ` <span style="color: var(--text-3); font-weight: 400;">≈ RM ${toMYR(s.price, s.currency).toFixed(0)}</span>` : ''}</span>` : `<button class="quick-action quick-set-price" data-id="${s.id}">+ 设月费</button>`}
                 ${dueText ? `<span class="due-date ${dueClass}">${dueText}</span>` : `<button class="quick-action quick-set-date" data-id="${s.id}">+ 设到期日</button>`}
+                ${s.renewUrl ? `<button class="quick-action goto-renew-btn" data-id="${s.id}" data-url="${escapeHtml(s.renewUrl)}" style="border-color: #3b82f6; color: #3b82f6; border-style: solid; background: rgba(59, 130, 246, 0.06);">🔗 去续费</button>` : ''}
                 ${s.dueDate ? `<button class="quick-action renew-quick" data-id="${s.id}" style="border-color: var(--green); color: var(--green); border-style: solid; background: rgba(16, 185, 129, 0.06);">✓ 已续费</button>` : ''}
               </div>
               ${(s.username || s.password) ? `
@@ -1919,6 +1926,22 @@ function renderServerList(all) {
     });
   });
   
+  // 卡片"去续费" 按钮 - 跳转供应商网站 + 记录时间
+  container.querySelectorAll('.goto-renew-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = parseInt(btn.dataset.id);
+      const url = btn.dataset.url;
+      if (!url) return;
+      // 记录点击时间到 localStorage (作为"待确认"状态)
+      const pending = JSON.parse(localStorage.getItem('pendingRenewals') || '{}');
+      pending[id] = { time: Date.now(), id };
+      localStorage.setItem('pendingRenewals', JSON.stringify(pending));
+      // 新标签打开供应商网站
+      window.open(url, '_blank');
+    });
+  });
+  
   // 显示密码(临时弹窗)
   container.querySelectorAll('.login-pwd-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
@@ -1983,6 +2006,7 @@ async function openServerEdit(id = null) {
     document.getElementById('inUsername').value = s.username || '';
     document.getElementById('inPort').value = s.port || '';
     document.getElementById('inPassword').value = s.password || '';
+    document.getElementById('inRenewUrl').value = s.renewUrl || '';
     pendingServerStatus = s.status || 'active';
     document.getElementById('deleteServerBtn').classList.remove('hidden');
     document.getElementById('renewBtn').style.display = s.dueDate ? 'block' : 'none';
@@ -1999,6 +2023,7 @@ async function openServerEdit(id = null) {
     document.getElementById('inUsername').value = '';
     document.getElementById('inPort').value = '';
     document.getElementById('inPassword').value = '';
+    document.getElementById('inRenewUrl').value = '';
     pendingServerStatus = 'active';
     document.getElementById('deleteServerBtn').classList.add('hidden');
     document.getElementById('renewBtn').style.display = 'none';
@@ -2056,6 +2081,7 @@ document.getElementById('saveServerBtn').addEventListener('click', async () => {
     username: document.getElementById('inUsername').value.trim(),
     port: document.getElementById('inPort').value.trim(),
     password: document.getElementById('inPassword').value,  // 密码保留空格(可能有意义)
+    renewUrl: document.getElementById('inRenewUrl').value.trim(),
     status: pendingServerStatus
   };
   
@@ -2733,6 +2759,112 @@ async function checkAndNotify() {
     await Data.setSetting('lastNotifDate', today);
   }
 }
+
+// ============ 续费确认弹窗 ============
+// 用户点了"去续费"后, 回到 App 时弹"已续费了吗?"
+async function checkPendingRenewals() {
+  const pending = JSON.parse(localStorage.getItem('pendingRenewals') || '{}');
+  const ids = Object.keys(pending);
+  if (ids.length === 0) return;
+  
+  const now = Date.now();
+  const stale = []; // 超过 30 分钟的清掉
+  const toAsk = [];
+  
+  for (const id of ids) {
+    const item = pending[id];
+    const ageMin = (now - item.time) / 60000;
+    if (ageMin > 30) {
+      stale.push(id);
+    } else if (ageMin > 0.3) { // 至少 20 秒后再问 (避免刚跳转就被切回来导致误弹)
+      toAsk.push(item);
+    }
+  }
+  
+  // 清掉过期的
+  if (stale.length > 0) {
+    stale.forEach(id => delete pending[id]);
+    localStorage.setItem('pendingRenewals', JSON.stringify(pending));
+  }
+  
+  if (toAsk.length === 0) return;
+  
+  // 取第一个问
+  const item = toAsk[0];
+  const all = await Data.getAll();
+  const s = all.find(x => x.id === parseInt(item.id));
+  if (!s) {
+    delete pending[item.id];
+    localStorage.setItem('pendingRenewals', JSON.stringify(pending));
+    return;
+  }
+  
+  showRenewConfirmDialog(s, () => {
+    // 不管选什么,都清掉 pending
+    delete pending[item.id];
+    localStorage.setItem('pendingRenewals', JSON.stringify(pending));
+    // 还有更多就继续问
+    if (toAsk.length > 1) setTimeout(checkPendingRenewals, 300);
+  });
+}
+
+function showRenewConfirmDialog(server, onClose) {
+  // 移除老的(如果有)
+  const old = document.getElementById('renewConfirmDialog');
+  if (old) old.remove();
+  
+  const dlg = document.createElement('div');
+  dlg.id = 'renewConfirmDialog';
+  dlg.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px;';
+  
+  const provider = server.provider || '供应商';
+  const cycleLabel = server.cycle === 'monthly' ? '一个月' : server.cycle === 'quarterly' ? '一个季度' : server.cycle === 'yearly' ? '一年' : server.cycle === 'weekly' ? '一周' : '';
+  
+  dlg.innerHTML = `
+    <div style="background: white; border-radius: 14px; padding: 22px; max-width: 380px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
+      <div style="text-align: center; font-size: 36px; margin-bottom: 10px;">💳</div>
+      <div style="font-weight: 700; font-size: 16px; text-align: center; color: #0f172a; margin-bottom: 6px;">续费完成了吗?</div>
+      <div style="font-size: 13px; color: #64748b; text-align: center; line-height: 1.6; margin-bottom: 16px;">
+        你刚才去 <b>${escapeHtml(provider)}</b> 续费 <b style="font-family: 'JetBrains Mono', monospace;">${escapeHtml(server.ip)}</b>
+        ${cycleLabel ? `<br>(${cycleLabel} 周期)` : ''}
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button id="renewConfirmNo" style="flex: 1; background: #f1f5f9; color: #475569; border: none; padding: 11px; border-radius: 8px; font-weight: 600; font-family: inherit; font-size: 13px; cursor: pointer;">还没付</button>
+        <button id="renewConfirmYes" style="flex: 1.3; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 11px; border-radius: 8px; font-weight: 600; font-family: inherit; font-size: 13px; cursor: pointer;">✓ 已续费</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(dlg);
+  
+  document.getElementById('renewConfirmYes').addEventListener('click', async () => {
+    // 推到下个周期
+    if (server.dueDate) {
+      const newDate = addPeriod(server.dueDate, server.cycle || 'monthly');
+      server.dueDate = newDate;
+      await Data.update(server);
+      showToast(`✓ ${server.ip} 已续费 → ${newDate}`);
+      await renderAll();
+      schedulePush();
+    } else {
+      // 没设到期日, 让用户去编辑
+      showToast(`请去编辑设置到期日`);
+    }
+    dlg.remove();
+    if (onClose) onClose();
+  });
+  
+  document.getElementById('renewConfirmNo').addEventListener('click', () => {
+    dlg.remove();
+    if (onClose) onClose();
+  });
+}
+
+// App 重新可见时(用户从供应商网站切回来)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    setTimeout(checkPendingRenewals, 500); // 延迟 0.5 秒避免太突兀
+  }
+});
 
 (async () => {
   await openDB();
