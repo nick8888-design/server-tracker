@@ -905,6 +905,7 @@ textarea {
     <button class="filter-tab active" data-domain-filter="all">全部</button>
     <button class="filter-tab" data-domain-filter="overdue">已过期</button>
     <button class="filter-tab" data-domain-filter="soon">即将到期</button>
+    <button class="filter-tab" data-domain-filter="inactive">已停用</button>
   </div>
 
   <div id="domainList"></div>
@@ -959,6 +960,18 @@ textarea {
         <input type="text" id="fDomainNote" placeholder="">
       </div>
     </div>
+    
+    <div class="form-row">
+      <div>
+        <label>状态</label>
+        <select id="fDomainStatus">
+          <option value="active">✓ 启用 (active)</option>
+          <option value="inactive">⏸ 已停用 (不计/不提醒)</option>
+        </select>
+      </div>
+    </div>
+    
+    <button class="btn" id="domainQuickToggleBtn" style="display: none; width: 100%; margin-top: 8px; background: #e89a3b; color: white;">⏸ 停用了</button>
     
     <div style="display: flex; gap: 8px; margin-top: 16px;">
       <button class="btn btn-danger" id="domainDeleteBtn" style="display: none;">删除</button>
@@ -2059,6 +2072,7 @@ function renderDomainAlertBanner(all) {
   if (!banner) return;
   
   const upcoming = all
+    .filter(d => d.status !== 'inactive')
     .map(d => ({ ...d, days: daysUntil(d.expiryDate) }))
     .filter(d => d.days !== null && d.days <= 60)
     .sort((a, b) => a.days - b.days);
@@ -2085,10 +2099,11 @@ function renderDomainAlertBanner(all) {
 }
 
 function renderDomainSummary(all) {
-  document.getElementById('domainCount').textContent = all.length;
-  document.getElementById('domainSubText').textContent = `${all.length} 个域名`;
+  const active = all.filter(d => d.status !== 'inactive');
+  document.getElementById('domainCount').textContent = active.length;
+  document.getElementById('domainSubText').textContent = `${active.length} 启用 · ${all.length} 总数`;
   
-  const upcoming = all
+  const upcoming = active
     .map(d => ({ ...d, days: daysUntil(d.expiryDate) }))
     .filter(d => d.days !== null && d.days >= 0)
     .sort((a, b) => a.days - b.days);
@@ -2109,11 +2124,17 @@ function renderDomainList(all) {
   
   let filtered = all.map(d => ({ ...d, days: daysUntil(d.expiryDate) }));
   
-  // 按 filter
-  if (currentDomainFilter === 'overdue') {
-    filtered = filtered.filter(d => d.days !== null && d.days < 0);
-  } else if (currentDomainFilter === 'soon') {
-    filtered = filtered.filter(d => d.days !== null && d.days >= 0 && d.days <= 60);
+  // 默认: 不显示 inactive (除非选了"已停用" filter)
+  if (currentDomainFilter === 'inactive') {
+    filtered = filtered.filter(d => d.status === 'inactive');
+  } else {
+    // 其他 filter 都先排除 inactive
+    filtered = filtered.filter(d => d.status !== 'inactive');
+    if (currentDomainFilter === 'overdue') {
+      filtered = filtered.filter(d => d.days !== null && d.days < 0);
+    } else if (currentDomainFilter === 'soon') {
+      filtered = filtered.filter(d => d.days !== null && d.days >= 0 && d.days <= 60);
+    }
   }
   
   // 按搜索
@@ -2137,8 +2158,10 @@ function renderDomainList(all) {
   }
   
   list.innerHTML = filtered.map(d => {
+    const isInactive = d.status === 'inactive';
     let countdownCls = 'safe', countdownText = '';
-    if (d.days === null) { countdownText = '未设到期日'; }
+    if (isInactive) { countdownCls = 'safe'; countdownText = '⏸ 已停用'; }
+    else if (d.days === null) { countdownText = '未设到期日'; }
     else if (d.days < 0) { countdownCls = 'overdue'; countdownText = `已过期 ${Math.abs(d.days)} 天`; }
     else if (d.days === 0) { countdownCls = 'danger'; countdownText = '今天到期'; }
     else if (d.days <= 30) { countdownCls = 'danger'; countdownText = `还有 ${d.days} 天`; }
@@ -2146,8 +2169,8 @@ function renderDomainList(all) {
     else { countdownCls = 'safe'; countdownText = `还有 ${d.days} 天`; }
     
     return `
-      <div class="domain-card">
-        <div class="domain-card-name">${escapeHtml(d.name)}</div>
+      <div class="domain-card" style="${isInactive ? 'opacity: 0.5;' : ''}">
+        <div class="domain-card-name">${escapeHtml(d.name)}${isInactive ? ' <span style="font-size: 11px; color: #999; font-weight: 400; font-family: inherit;">[已停用]</span>' : ''}</div>
         <div class="domain-card-meta">
           <div>📅 到期: <strong>${d.expiryDate || '-'}</strong></div>
           <div><span class="domain-countdown ${countdownCls}">${countdownText}</span></div>
@@ -2156,7 +2179,7 @@ function renderDomainList(all) {
           ${d.note ? `<div style="color: #5c4a2a;">${escapeHtml(d.note)}</div>` : ''}
         </div>
         <div class="domain-card-actions">
-          ${d.url ? `<button class="btn btn-primary" onclick="window.open('${d.url}','_blank')">🔗 续费</button>` : ''}
+          ${d.url && !isInactive ? `<button class="btn btn-primary" onclick="window.open('${d.url}','_blank')">🔗 续费</button>` : ''}
           <button class="btn" style="background: #eee; color: #333;" onclick="editDomain(${d.id})">编辑</button>
         </div>
       </div>
@@ -2177,6 +2200,19 @@ window.editDomain = async function(id) {
   document.getElementById('fDomainRegistrar').value = d.registrar || '';
   document.getElementById('fDomainUrl').value = d.url || '';
   document.getElementById('fDomainNote').value = d.note || '';
+  document.getElementById('fDomainStatus').value = d.status || 'active';
+  // 快速停用/启用按钮
+  const quickBtn = document.getElementById('domainQuickToggleBtn');
+  if (quickBtn) {
+    quickBtn.style.display = '';
+    if (d.status === 'inactive') {
+      quickBtn.textContent = '✓ 启用';
+      quickBtn.style.background = '#6b8e23';
+    } else {
+      quickBtn.textContent = '⏸ 停用了';
+      quickBtn.style.background = '#e89a3b';
+    }
+  }
   document.getElementById('domainDeleteBtn').style.display = '';
   document.getElementById('domainModal').classList.add('show');
 };
@@ -2192,7 +2228,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('fDomainRegistrar').value = '';
     document.getElementById('fDomainUrl').value = '';
     document.getElementById('fDomainNote').value = '';
+    document.getElementById('fDomainStatus').value = 'active';
     document.getElementById('domainDeleteBtn').style.display = 'none';
+    const qb = document.getElementById('domainQuickToggleBtn');
+    if (qb) qb.style.display = 'none';
     document.getElementById('domainModal').classList.add('show');
   });
   
@@ -2203,6 +2242,21 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('domainModal').classList.remove('show');
   });
   
+  // 快速停用/启用按钮 - 一键切换 + 保存 + 关弹窗
+  document.getElementById('domainQuickToggleBtn')?.addEventListener('click', async () => {
+    if (!editingDomainId) return;
+    const all = await Domains.getAll();
+    const d = all.find(x => x.id === editingDomainId);
+    if (!d) return;
+    const newStatus = d.status === 'inactive' ? 'active' : 'inactive';
+    const updated = Object.assign({}, d, { status: newStatus, updatedAt: Date.now() });
+    await Domains.update(updated);
+    document.getElementById('domainModal').classList.remove('show');
+    await renderDomainsAll();
+    pushDomainsToVPS();
+    showToast(newStatus === 'inactive' ? '✓ 已停用 ' + d.name : '✓ 已启用 ' + d.name);
+  });
+  
   document.getElementById('domainSaveBtn')?.addEventListener('click', async () => {
     const name = document.getElementById('fDomainName').value.trim();
     const expiryDate = document.getElementById('fDomainExpiry').value;
@@ -2210,11 +2264,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const registrar = document.getElementById('fDomainRegistrar').value.trim();
     const url = document.getElementById('fDomainUrl').value.trim();
     const note = document.getElementById('fDomainNote').value.trim();
+    const status = document.getElementById('fDomainStatus').value || 'active';
     
     if (!name) { alert('请输入域名'); return; }
     if (!expiryDate) { alert('请选到期日'); return; }
     
-    const data = { name, expiryDate, price, registrar, url, note, updatedAt: Date.now() };
+    const data = { name, expiryDate, price, registrar, url, note, status, updatedAt: Date.now() };
     if (editingDomainId) {
       data.id = editingDomainId;
       await Domains.update(data);
