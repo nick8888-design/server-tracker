@@ -259,6 +259,60 @@ body {
   -webkit-overflow-scrolling: touch;
   padding-bottom: 4px;
 }
+
+.page-tab.active {
+  background: white !important;
+  color: var(--accent-dark, #8b6f3f) !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.domain-card {
+  background: var(--bg-2, white);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  border: 1px solid var(--line-soft, #eee);
+}
+.domain-card-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text, #1a1a1a);
+  margin-bottom: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  word-break: break-all;
+}
+.domain-card-meta {
+  font-size: 12px;
+  color: var(--text-3, #999);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-bottom: 10px;
+}
+.domain-card-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.domain-card-actions .btn {
+  flex: 1;
+  min-width: 80px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+.domain-countdown {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+.domain-countdown.safe { background: rgba(107, 142, 35, 0.12); color: #6b8e23; }
+.domain-countdown.warn { background: rgba(232, 154, 59, 0.15); color: #e89a3b; }
+.domain-countdown.danger { background: rgba(196, 99, 60, 0.15); color: #c4633c; }
+.domain-countdown.overdue { background: #c4633c; color: white; }
+
 .filter-tabs::-webkit-scrollbar { height: 0; }
 .filter-tab {
   background: var(--bg-2);
@@ -744,6 +798,13 @@ textarea {
     </div>
   </header>
 
+  <!-- Tab 切换 -->
+  <div style="display: flex; gap: 6px; margin-bottom: 14px; background: var(--bg-secondary, #f5f5f5); padding: 4px; border-radius: 10px;">
+    <button class="page-tab active" data-page="servers" style="flex: 1; padding: 10px; background: transparent; border: none; border-radius: 7px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; color: #666;">🖥️ 服务器</button>
+    <button class="page-tab" data-page="domains" style="flex: 1; padding: 10px; background: transparent; border: none; border-radius: 7px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; color: #666;">🌐 域名</button>
+  </div>
+
+<div id="serversPage">
   <div id="alertBanner" class="alert-banner empty">
     <div class="alert-title">
       <span id="alertIcon">✓</span>
@@ -795,6 +856,145 @@ textarea {
   <div id="serverList"></div>
 
   <button class="fab" id="addBtn" title="添加服务器">+</button>
+</div>
+<!-- /serversPage -->
+
+<!-- ============ 域名页 ============ -->
+<div id="domainsPage" style="display: none;">
+  <div id="domainAlertBanner" class="alert-banner empty">
+    <div class="alert-title">
+      <span id="domainAlertIcon">✓</span>
+      <span id="domainAlertTitle">所有域名都还远</span>
+    </div>
+    <div class="alert-list" id="domainAlertList"></div>
+  </div>
+
+  <div class="summary">
+    <div class="tile">
+      <div class="label">域名总数</div>
+      <div class="value green" id="domainCount">0</div>
+      <div class="meta" id="domainSubText">0 个域名</div>
+    </div>
+    <div class="tile">
+      <div class="label">下次到期</div>
+      <div class="value blue" id="domainNextDue">—</div>
+      <div class="meta" id="domainNextDueName">尚未设置</div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="action-btn" id="domainImportBtn">
+      <span class="icon">📥</span>
+      <span>导入 txt</span>
+    </button>
+    <button class="action-btn" id="domainExportBtn">
+      <span class="icon">📤</span>
+      <span>导出备份</span>
+    </button>
+    <button class="action-btn" id="domainAliyunBtn">
+      <span class="icon">🔗</span>
+      <span>阿里云管理</span>
+    </button>
+  </div>
+
+  <div class="search-bar">
+    <input type="text" id="domainSearchInput" placeholder="搜索域名..." autocomplete="off">
+  </div>
+
+  <div class="filter-tabs">
+    <button class="filter-tab active" data-domain-filter="all">全部</button>
+    <button class="filter-tab" data-domain-filter="overdue">已过期</button>
+    <button class="filter-tab" data-domain-filter="soon">即将到期</button>
+  </div>
+
+  <div id="domainList"></div>
+
+  <button class="fab" id="addDomainBtn" title="添加域名">+</button>
+</div>
+<!-- /domainsPage -->
+
+<!-- 域名编辑 Modal -->
+<div class="modal" id="domainModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-title" id="domainModalTitle">添加域名</span>
+      <button class="modal-close" id="domainModalClose">✕</button>
+    </div>
+    
+    <div class="form-row">
+      <div>
+        <label>域名 *</label>
+        <input type="text" id="fDomainName" placeholder="例: example.com" autocomplete="off">
+      </div>
+    </div>
+    
+    <div class="form-row">
+      <div>
+        <label>到期日 *</label>
+        <input type="date" id="fDomainExpiry">
+      </div>
+    </div>
+    
+    <div class="form-row">
+      <div>
+        <label>金额 (RM, 可选)</label>
+        <input type="number" step="0.01" id="fDomainPrice" placeholder="例: 50">
+      </div>
+      <div>
+        <label>注册商 (可选)</label>
+        <input type="text" id="fDomainRegistrar" placeholder="例: 阿里云 / NameCheap">
+      </div>
+    </div>
+    
+    <div class="form-row">
+      <div>
+        <label>续费网址 (可选)</label>
+        <input type="url" id="fDomainUrl" placeholder="https://...">
+      </div>
+    </div>
+    
+    <div class="form-row">
+      <div>
+        <label>备注 (可选)</label>
+        <input type="text" id="fDomainNote" placeholder="">
+      </div>
+    </div>
+    
+    <div style="display: flex; gap: 8px; margin-top: 16px;">
+      <button class="btn btn-danger" id="domainDeleteBtn" style="display: none;">删除</button>
+      <button class="btn" id="domainCancelBtn" style="background: #ccc; color: #333;">取消</button>
+      <button class="btn btn-primary" id="domainSaveBtn" style="flex: 1;">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 域名导入 Modal -->
+<div class="modal" id="domainImportModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-title">📥 导入域名</span>
+      <button class="modal-close" id="domainImportClose">✕</button>
+    </div>
+    
+    <div style="margin-bottom: 12px; font-size: 12px; color: #666; line-height: 1.6;">
+      <strong>支持格式</strong>:<br>
+      • <strong>阿里云导出</strong>: 直接粘贴(自动识别)<br>
+      • <strong>简单格式</strong>: 每行 <code>域名,到期日</code> 或 <code>域名(Tab)到期日</code><br>
+      <strong>日期支持</strong>: YYYY-MM-DD / Feb 21,2027 / 2027/2/21
+    </div>
+    
+    <textarea id="domainImportText" rows="10" style="width: 100%; font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 10px; border: 1px solid #ddd; border-radius: 6px;" placeholder="365365c.cc&#10;ccTLD	Normal	--	Feb 21,2026 10:29:37	Feb 21,2027 10:29:37	Renew|Resolve|Manage&#10;...&#10;&#10;或:&#10;example.com,2027-02-21"></textarea>
+    
+    <input type="file" id="domainImportFile" accept=".txt,.csv" style="display: none;">
+    <button class="btn" id="domainImportFileBtn" style="background: #eee; color: #333; margin-top: 8px; font-size: 12px;">📄 从文件选取</button>
+    
+    <div id="domainImportPreview" style="margin-top: 12px;"></div>
+    
+    <div style="display: flex; gap: 8px; margin-top: 16px;">
+      <button class="btn" id="domainImportCancel" style="background: #ccc; color: #333;">取消</button>
+      <button class="btn btn-primary" id="domainImportConfirm" style="flex: 1;">✓ 解析并导入</button>
+    </div>
+  </div>
 </div>
 
 <div class="modal" id="serverModal">
@@ -1225,7 +1425,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 const DB_NAME = 'serverTrackerDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;  // 升级到 v2 加 domains
 let db;
 
 function openDB() {
@@ -1239,6 +1439,9 @@ function openDB() {
       }
       if (!d.objectStoreNames.contains('settings')) {
         d.createObjectStore('settings', { keyPath: 'key' });
+      }
+      if (!d.objectStoreNames.contains('domains')) {
+        d.createObjectStore('domains', { keyPath: 'id', autoIncrement: true });
       }
     };
     req.onsuccess = (e) => { db = e.target.result; res(db); };
@@ -1305,6 +1508,50 @@ const Data = {
   }
 };
 
+// ============ 域名数据接口 ============
+const Domains = {
+  add(d) {
+    return new Promise((res, rej) => {
+      const tx = db.transaction('domains', 'readwrite');
+      const r = tx.objectStore('domains').add(d);
+      r.onsuccess = () => res(r.result);
+      r.onerror = rej;
+    });
+  },
+  update(d) {
+    return new Promise((res, rej) => {
+      const tx = db.transaction('domains', 'readwrite');
+      const r = tx.objectStore('domains').put(d);
+      r.onsuccess = () => res();
+      r.onerror = rej;
+    });
+  },
+  delete(id) {
+    return new Promise((res, rej) => {
+      const tx = db.transaction('domains', 'readwrite');
+      const r = tx.objectStore('domains').delete(id);
+      r.onsuccess = () => res();
+      r.onerror = rej;
+    });
+  },
+  getAll() {
+    return new Promise((res, rej) => {
+      const tx = db.transaction('domains', 'readonly');
+      const r = tx.objectStore('domains').getAll();
+      r.onsuccess = () => res(r.result || []);
+      r.onerror = rej;
+    });
+  },
+  clearAll() {
+    return new Promise((res, rej) => {
+      const tx = db.transaction('domains', 'readwrite');
+      tx.objectStore('domains').clear();
+      tx.oncomplete = () => res();
+      tx.onerror = rej;
+    });
+  }
+};
+
 function todayStr() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -1336,14 +1583,16 @@ function addPeriod(dateStr, cycle) {
 // 这是基础默认值,用户在设置里可以更新最新汇率
 const DEFAULT_RATES = {
   MYR: 1,
-  USD: 4.7,
-  EUR: 5.1,
-  CNY: 0.65,
-  SGD: 3.5,
-  HKD: 0.60,
-  TWD: 0.145,
-  GBP: 5.95,
-  AUD: 3.10
+  USD: 3.93,
+  EUR: 4.62,
+  CNY: 0.54,
+  SGD: 3.04,
+  HKD: 0.50,
+  TWD: 0.13,
+  GBP: 5.34,
+  AUD: 2.55,
+  JPY: 0.026,
+  INR: 0.047
 };
 
 const CURRENCY_SYMBOLS = {
@@ -1355,7 +1604,9 @@ const CURRENCY_SYMBOLS = {
   HKD: 'HK$',
   TWD: 'NT$',
   GBP: '£',
-  AUD: 'A$'
+  AUD: 'A$',
+  JPY: '¥',
+  INR: '₹'
 };
 
 let currentRates = { ...DEFAULT_RATES };
@@ -1662,6 +1913,455 @@ async function renderAll() {
   await renderAlertBanner(all);
   renderSummary(all);
   renderServerList(all);
+  await renderDomainsAll();
+}
+
+// ============ 域名功能 ============
+let currentDomainFilter = 'all';
+let editingDomainId = null;
+const DOMAIN_APP_NAME = 'domains';
+
+// 页面切换
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.page-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.page-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const page = tab.dataset.page;
+      document.getElementById('serversPage').style.display = page === 'servers' ? '' : 'none';
+      document.getElementById('domainsPage').style.display = page === 'domains' ? '' : 'none';
+    });
+  });
+  
+  // 设置 active page-tab 样式
+  document.querySelectorAll('.page-tab').forEach(t => {
+    if (t.classList.contains('active')) {
+      t.style.background = 'white';
+      t.style.color = '#8b6f3f';
+    }
+  });
+});
+
+// 解析域名 txt (支持阿里云格式 + 简单格式)
+function parseDomainText(text) {
+  const lines = text.split(/\r?\n/).map(l => l.trim());
+  const results = [];
+  const errors = [];
+  
+  // 阿里云格式:第一行是域名,第二行是 TLD/状态/...等(含 2 个日期,第二个是到期日)
+  // 简单格式:每行一笔,逗号或 Tab 分隔: 域名,到期日
+  
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (!line || line.startsWith('#')) { i++; continue; }
+    
+    // 试简单格式: 一行有域名 + 日期
+    const simpleParts = line.split(/\t|,/).map(p => p.trim()).filter(p => p);
+    if (simpleParts.length >= 2) {
+      const name = simpleParts[0];
+      const dateStr = parseAnyDate(simpleParts[1]);
+      if (looksLikeDomain(name) && dateStr) {
+        results.push({ name, expiryDate: dateStr });
+        i++;
+        continue;
+      }
+    }
+    
+    // 试阿里云格式: 当前行是域名,下一行是详情
+    if (looksLikeDomain(line) && i + 1 < lines.length) {
+      const detailLine = lines[i + 1];
+      // 提取所有日期
+      const dates = extractAllDates(detailLine);
+      if (dates.length >= 1) {
+        // 取最后一个日期 = 到期日 (阿里云格式: 创建日 在前, 到期日 在后)
+        const expiry = dates[dates.length - 1];
+        results.push({ name: line, expiryDate: expiry });
+        i += 2;
+        continue;
+      }
+    }
+    
+    // 都没匹配上
+    if (looksLikeDomain(line)) {
+      errors.push(`第 ${i + 1} 行 "${line}": 没找到到期日`);
+    }
+    i++;
+  }
+  
+  return { results, errors };
+}
+
+function looksLikeDomain(s) {
+  if (!s) return false;
+  // 简单判断: 含 . 和字母,不是 IP
+  return /^[a-zA-Z0-9][\w.-]*\.[a-zA-Z]{2,}$/.test(s);
+}
+
+function extractAllDates(s) {
+  const dates = [];
+  // 匹配 Mon DD,YYYY 或 Mon DD, YYYY
+  const mDmY = s.match(/[A-Z][a-z]{2}\s*\d{1,2}\s*,?\s*\d{4}/g);
+  if (mDmY) {
+    for (const m of mDmY) {
+      const d = parseAnyDate(m);
+      if (d) dates.push(d);
+    }
+  }
+  // 匹配 YYYY-MM-DD / YYYY/MM/DD
+  const iso = s.match(/\d{4}[-\/]\d{1,2}[-\/]\d{1,2}/g);
+  if (iso) {
+    for (const m of iso) {
+      const d = parseAnyDate(m);
+      if (d) dates.push(d);
+    }
+  }
+  return dates;
+}
+
+function parseAnyDate(s) {
+  if (!s) return null;
+  s = s.trim();
+  
+  // ISO YYYY-MM-DD
+  let m = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+  if (m) {
+    return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  }
+  
+  // Mon DD,YYYY
+  const monthMap = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' };
+  m = s.match(/^([A-Z][a-z]{2})\s*(\d{1,2})\s*,?\s*(\d{4})/);
+  if (m) {
+    const mm = monthMap[m[1]];
+    if (mm) return `${m[3]}-${mm}-${m[2].padStart(2,'0')}`;
+  }
+  
+  // DD/MM/YYYY
+  m = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+  if (m) {
+    return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  }
+  
+  return null;
+}
+
+async function renderDomainsAll() {
+  const all = await Domains.getAll();
+  renderDomainAlertBanner(all);
+  renderDomainSummary(all);
+  renderDomainList(all);
+}
+
+function renderDomainAlertBanner(all) {
+  const banner = document.getElementById('domainAlertBanner');
+  const list = document.getElementById('domainAlertList');
+  if (!banner) return;
+  
+  const upcoming = all
+    .map(d => ({ ...d, days: daysUntil(d.expiryDate) }))
+    .filter(d => d.days !== null && d.days <= 60)
+    .sort((a, b) => a.days - b.days);
+  
+  if (upcoming.length === 0) {
+    banner.classList.add('empty');
+    document.getElementById('domainAlertIcon').textContent = '✓';
+    document.getElementById('domainAlertTitle').textContent = '所有域名都还远';
+    list.innerHTML = '';
+    return;
+  }
+  
+  banner.classList.remove('empty');
+  document.getElementById('domainAlertIcon').textContent = '⚠️';
+  document.getElementById('domainAlertTitle').textContent = `${upcoming.length} 个域名即将到期`;
+  list.innerHTML = upcoming.slice(0, 6).map(d => {
+    let label;
+    if (d.days < 0) label = `<span style="color: #c4633c; font-weight: 700;">已过期 ${Math.abs(d.days)} 天</span>`;
+    else if (d.days === 0) label = `<span style="color: #c4633c; font-weight: 700;">今天到期</span>`;
+    else if (d.days <= 7) label = `<span style="color: #c4633c;">还有 ${d.days} 天</span>`;
+    else label = `还有 ${d.days} 天`;
+    return `<div style="font-size: 12px; padding: 3px 0;">${escapeHtml(d.name)} · ${label}</div>`;
+  }).join('');
+}
+
+function renderDomainSummary(all) {
+  document.getElementById('domainCount').textContent = all.length;
+  document.getElementById('domainSubText').textContent = `${all.length} 个域名`;
+  
+  const upcoming = all
+    .map(d => ({ ...d, days: daysUntil(d.expiryDate) }))
+    .filter(d => d.days !== null && d.days >= 0)
+    .sort((a, b) => a.days - b.days);
+  
+  if (upcoming.length > 0) {
+    const next = upcoming[0];
+    document.getElementById('domainNextDue').textContent = next.days + '天';
+    document.getElementById('domainNextDueName').textContent = next.name;
+  } else {
+    document.getElementById('domainNextDue').textContent = '—';
+    document.getElementById('domainNextDueName').textContent = '尚未设置';
+  }
+}
+
+function renderDomainList(all) {
+  const list = document.getElementById('domainList');
+  const searchTerm = (document.getElementById('domainSearchInput')?.value || '').toLowerCase();
+  
+  let filtered = all.map(d => ({ ...d, days: daysUntil(d.expiryDate) }));
+  
+  // 按 filter
+  if (currentDomainFilter === 'overdue') {
+    filtered = filtered.filter(d => d.days !== null && d.days < 0);
+  } else if (currentDomainFilter === 'soon') {
+    filtered = filtered.filter(d => d.days !== null && d.days >= 0 && d.days <= 60);
+  }
+  
+  // 按搜索
+  if (searchTerm) {
+    filtered = filtered.filter(d => 
+      (d.name || '').toLowerCase().includes(searchTerm) ||
+      (d.registrar || '').toLowerCase().includes(searchTerm) ||
+      (d.note || '').toLowerCase().includes(searchTerm)
+    );
+  }
+  
+  // 排序: 距离到期日近的在前
+  filtered.sort((a, b) => (a.days ?? 999999) - (b.days ?? 999999));
+  
+  if (filtered.length === 0) {
+    list.innerHTML = `<div style="text-align: center; padding: 40px 20px; color: #999;">
+      <div style="font-size: 36px; margin-bottom: 10px;">🌐</div>
+      <div style="font-size: 14px;">没有域名 - 点 + 添加 或 📥 导入</div>
+    </div>`;
+    return;
+  }
+  
+  list.innerHTML = filtered.map(d => {
+    let countdownCls = 'safe', countdownText = '';
+    if (d.days === null) { countdownText = '未设到期日'; }
+    else if (d.days < 0) { countdownCls = 'overdue'; countdownText = `已过期 ${Math.abs(d.days)} 天`; }
+    else if (d.days === 0) { countdownCls = 'danger'; countdownText = '今天到期'; }
+    else if (d.days <= 30) { countdownCls = 'danger'; countdownText = `还有 ${d.days} 天`; }
+    else if (d.days <= 90) { countdownCls = 'warn'; countdownText = `还有 ${d.days} 天`; }
+    else { countdownCls = 'safe'; countdownText = `还有 ${d.days} 天`; }
+    
+    return `
+      <div class="domain-card">
+        <div class="domain-card-name">${escapeHtml(d.name)}</div>
+        <div class="domain-card-meta">
+          <div>📅 到期: <strong>${d.expiryDate || '-'}</strong></div>
+          <div><span class="domain-countdown ${countdownCls}">${countdownText}</span></div>
+          ${d.registrar ? `<div>🏢 ${escapeHtml(d.registrar)}</div>` : ''}
+          ${d.price ? `<div>💰 RM ${parseFloat(d.price).toFixed(2)}</div>` : ''}
+          ${d.note ? `<div style="color: #5c4a2a;">${escapeHtml(d.note)}</div>` : ''}
+        </div>
+        <div class="domain-card-actions">
+          ${d.url ? `<button class="btn btn-primary" onclick="window.open('${d.url}','_blank')">🔗 续费</button>` : ''}
+          <button class="btn" style="background: #eee; color: #333;" onclick="editDomain(${d.id})">编辑</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// 添加/编辑域名
+window.editDomain = async function(id) {
+  const all = await Domains.getAll();
+  const d = all.find(x => x.id === id);
+  if (!d) return;
+  editingDomainId = id;
+  document.getElementById('domainModalTitle').textContent = '编辑域名';
+  document.getElementById('fDomainName').value = d.name || '';
+  document.getElementById('fDomainExpiry').value = d.expiryDate || '';
+  document.getElementById('fDomainPrice').value = d.price || '';
+  document.getElementById('fDomainRegistrar').value = d.registrar || '';
+  document.getElementById('fDomainUrl').value = d.url || '';
+  document.getElementById('fDomainNote').value = d.note || '';
+  document.getElementById('domainDeleteBtn').style.display = '';
+  document.getElementById('domainModal').classList.add('show');
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  // 添加
+  document.getElementById('addDomainBtn')?.addEventListener('click', () => {
+    editingDomainId = null;
+    document.getElementById('domainModalTitle').textContent = '添加域名';
+    document.getElementById('fDomainName').value = '';
+    document.getElementById('fDomainExpiry').value = '';
+    document.getElementById('fDomainPrice').value = '';
+    document.getElementById('fDomainRegistrar').value = '';
+    document.getElementById('fDomainUrl').value = '';
+    document.getElementById('fDomainNote').value = '';
+    document.getElementById('domainDeleteBtn').style.display = 'none';
+    document.getElementById('domainModal').classList.add('show');
+  });
+  
+  document.getElementById('domainModalClose')?.addEventListener('click', () => {
+    document.getElementById('domainModal').classList.remove('show');
+  });
+  document.getElementById('domainCancelBtn')?.addEventListener('click', () => {
+    document.getElementById('domainModal').classList.remove('show');
+  });
+  
+  document.getElementById('domainSaveBtn')?.addEventListener('click', async () => {
+    const name = document.getElementById('fDomainName').value.trim();
+    const expiryDate = document.getElementById('fDomainExpiry').value;
+    const price = parseFloat(document.getElementById('fDomainPrice').value) || null;
+    const registrar = document.getElementById('fDomainRegistrar').value.trim();
+    const url = document.getElementById('fDomainUrl').value.trim();
+    const note = document.getElementById('fDomainNote').value.trim();
+    
+    if (!name) { alert('请输入域名'); return; }
+    if (!expiryDate) { alert('请选到期日'); return; }
+    
+    const data = { name, expiryDate, price, registrar, url, note, updatedAt: Date.now() };
+    if (editingDomainId) {
+      data.id = editingDomainId;
+      await Domains.update(data);
+    } else {
+      await Domains.add(data);
+    }
+    document.getElementById('domainModal').classList.remove('show');
+    await renderDomainsAll();
+    pushDomainsToVPS();
+  });
+  
+  document.getElementById('domainDeleteBtn')?.addEventListener('click', async () => {
+    if (!editingDomainId) return;
+    if (!confirm('确定删除此域名?')) return;
+    await Domains.delete(editingDomainId);
+    document.getElementById('domainModal').classList.remove('show');
+    await renderDomainsAll();
+    pushDomainsToVPS();
+  });
+  
+  // Filter buttons
+  document.querySelectorAll('[data-domain-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-domain-filter]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentDomainFilter = btn.dataset.domainFilter;
+      renderDomainsAll();
+    });
+  });
+  
+  document.getElementById('domainSearchInput')?.addEventListener('input', () => {
+    renderDomainsAll();
+  });
+  
+  // 阿里云链接
+  document.getElementById('domainAliyunBtn')?.addEventListener('click', () => {
+    window.open('https://dc.console.aliyun.com/next/index?spm=5176.12818093_-1363046575.console-base_top-nav.dcname.3be916d0Wzr3WD#/domain/list/all-domain', '_blank');
+  });
+  
+  // 导入
+  document.getElementById('domainImportBtn')?.addEventListener('click', () => {
+    document.getElementById('domainImportText').value = '';
+    document.getElementById('domainImportPreview').innerHTML = '';
+    document.getElementById('domainImportModal').classList.add('show');
+  });
+  document.getElementById('domainImportClose')?.addEventListener('click', () => {
+    document.getElementById('domainImportModal').classList.remove('show');
+  });
+  document.getElementById('domainImportCancel')?.addEventListener('click', () => {
+    document.getElementById('domainImportModal').classList.remove('show');
+  });
+  document.getElementById('domainImportFileBtn')?.addEventListener('click', () => {
+    document.getElementById('domainImportFile').click();
+  });
+  document.getElementById('domainImportFile')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const text = await file.text();
+    document.getElementById('domainImportText').value = text;
+    document.getElementById('domainImportText').dispatchEvent(new Event('input'));
+    e.target.value = '';
+  });
+  document.getElementById('domainImportText')?.addEventListener('input', () => {
+    const text = document.getElementById('domainImportText').value;
+    if (!text.trim()) { document.getElementById('domainImportPreview').innerHTML = ''; return; }
+    const { results, errors } = parseDomainText(text);
+    let html = '<div style="font-size: 12px; color: #555; padding: 10px; background: #f5f5f5; border-radius: 6px;">';
+    html += `✓ 解析: <strong>${results.length}</strong> 个域名`;
+    if (errors.length > 0) {
+      html += `<br>✗ <strong style="color: #c4633c;">${errors.length}</strong> 行无法解析<br>`;
+      html += errors.slice(0, 3).map(e => `<small>· ${escapeHtml(e)}</small>`).join('<br>');
+    }
+    html += '</div>';
+    document.getElementById('domainImportPreview').innerHTML = html;
+  });
+  document.getElementById('domainImportConfirm')?.addEventListener('click', async () => {
+    const text = document.getElementById('domainImportText').value.trim();
+    if (!text) return;
+    const { results } = parseDomainText(text);
+    if (results.length === 0) { alert('未识别到域名'); return; }
+    
+    const mode = confirm(`识别到 ${results.length} 个域名\n\n确定 = 覆盖现有所有域名\n取消 = 追加到现有域名`);
+    if (mode) await Domains.clearAll();
+    
+    for (const r of results) {
+      await Domains.add({
+        name: r.name,
+        expiryDate: r.expiryDate,
+        registrar: '阿里云',
+        url: 'https://dc.console.aliyun.com/next/index#/domain/list/all-domain',
+        updatedAt: Date.now()
+      });
+    }
+    document.getElementById('domainImportModal').classList.remove('show');
+    await renderDomainsAll();
+    pushDomainsToVPS();
+    alert(`✓ 已${mode ? '覆盖' : '追加'} ${results.length} 个域名`);
+  });
+  
+  // 导出
+  document.getElementById('domainExportBtn')?.addEventListener('click', async () => {
+    const all = await Domains.getAll();
+    if (all.length === 0) { alert('没有域名可导出'); return; }
+    const lines = all.map(d => `${d.name},${d.expiryDate || ''}`).join('\n');
+    const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `domains_${todayStr()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+});
+
+// 域名云同步 (用单独的 app_name = 'domains')
+let domainPushTimer = null;
+async function pushDomainsToVPS() {
+  if (domainPushTimer) clearTimeout(domainPushTimer);
+  domainPushTimer = setTimeout(async () => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      const all = await Domains.getAll();
+      await fetch(`${API_URL}/api/data/${DOMAIN_APP_NAME}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify(all)
+      });
+    } catch (e) {
+      console.error('Push domains error:', e);
+    }
+  }, 1500);
+}
+
+async function pullDomainsFromVPS() {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    const res = await fetch(`${API_URL}/api/data/${DOMAIN_APP_NAME}`, {
+      headers: { 'x-auth-token': token }
+    });
+    if (!res.ok) return null;
+    const result = await res.json();
+    return result.data;
+  } catch (e) {
+    return null;
+  }
 }
 
 async function renderAlertBanner(all) {
@@ -2886,6 +3586,16 @@ document.addEventListener('visibilitychange', () => {
         await Data.add(rest);
       }
       await renderAll();
+    }
+    // 拉云端域名数据
+    const cloudDomains = await pullDomainsFromVPS();
+    if (cloudDomains && Array.isArray(cloudDomains)) {
+      await Domains.clearAll();
+      for (const d of cloudDomains) {
+        const { id, ...rest } = d;
+        await Domains.add(rest);
+      }
+      await renderDomainsAll();
     }
   }
   
